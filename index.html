@@ -1,0 +1,2420 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modelat del relleu · Simulador · 1r ESO</title>
+<style>
+  :root{
+    --ink:#1b2733; --panel:#233340; --panel-2:#2c4050; --line:#3a5163;
+    --paper:#eef1f4; --paper-2:#e3e8ed;
+    --gold:#e2b13c; --gold-dim:#9a8141;
+    --txt:#dfe6ec; --txt-dim:#9fb1c0;
+    --ok:#2f9e57; --bad:#cf4b3b;
+    --mono:ui-monospace,"Cascadia Code","SF Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--sans); color:var(--txt);
+    background:radial-gradient(1200px 600px at 15% -10%, #2a3c4c 0%, transparent 60%), var(--ink);
+    line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1120px;margin:0 auto;padding:22px 18px 60px}
+
+  header{position:relative;padding:18px 0 10px;overflow:hidden}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);margin:0 0 6px}
+  h1{font-size:clamp(26px,4.4vw,42px);line-height:1.04;letter-spacing:-.02em;font-weight:800;margin:0;color:#fff}
+  h1 .thin{font-weight:400;color:var(--txt-dim)}
+  .lede{max-width:64ch;color:var(--txt-dim);margin:10px 0 0;font-size:15px}
+  .contours{position:absolute;inset:-40% -10% auto auto;width:420px;height:420px;opacity:.10;pointer-events:none;z-index:-1}
+
+  .label{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--txt-dim);margin:0 0 8px}
+
+  .stage{display:flex;flex-direction:column;gap:12px;min-width:0}
+  .canvas-shell{position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#0e161e}
+  canvas{display:block;width:100%;height:auto;aspect-ratio:900/460}
+  .agent-tag{position:absolute;left:12px;top:11px;font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+    color:#0e161e;background:var(--gold);padding:4px 9px;border-radius:6px;font-weight:700}
+
+  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .btn{font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;border-radius:9px;padding:9px 16px;border:1px solid var(--line);
+    background:var(--panel-2);color:var(--txt);transition:background .12s,transform .08s}
+  .btn:hover{background:#33485a}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{background:var(--gold);color:#1b2733;border-color:var(--gold)}
+  .btn.primary:hover{background:#ecbf52}
+  .btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+  .process{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+  .chip{font-family:var(--mono);font-size:11px;letter-spacing:.04em;padding:5px 10px;border-radius:20px;border:1px solid var(--line);
+    color:var(--txt-dim);background:#1d2a35;transition:all .2s}
+  .chip.on{color:#1b2733;background:var(--gold);border-color:var(--gold);font-weight:700}
+  .arrow{color:var(--txt-dim);font-size:12px}
+
+  .legend{display:flex;flex-wrap:wrap;gap:7px 16px;align-items:center;font-family:var(--mono);font-size:11px;color:var(--txt-dim);
+    background:#1d2a35;border:1px solid var(--line);border-radius:9px;padding:8px 13px}
+  .lg{display:inline-flex;align-items:center;gap:7px}
+  .sw{display:inline-block;width:15px;height:10px;border-radius:2px}
+  .sw.dash{width:20px;height:0;border-top:2px dashed #c6d2db;border-radius:0}
+  .counters{margin-left:auto;letter-spacing:.04em}
+  .counters b{color:var(--gold);font-weight:700}
+  @media (max-width:640px){.counters{margin-left:0;width:100%}}
+
+  .hint{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:13px 15px}
+  .hint h3{margin:0 0 4px;font-size:14px;color:#fff}
+  .hint p{margin:0;font-size:13.5px;color:var(--txt-dim)}
+  .hint .forms{margin-top:9px;display:flex;flex-wrap:wrap;gap:6px}
+  .tagform{font-family:var(--mono);font-size:11px;color:var(--gold);border:1px dashed var(--gold-dim);padding:3px 8px;border-radius:6px}
+
+  .quiz{margin-top:24px;background:var(--paper);color:#1b2733;border-radius:14px;padding:20px 20px 24px;border:1px solid var(--paper-2)}
+  .quiz-head{display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;align-items:flex-end;border-bottom:2px solid var(--paper-2);padding-bottom:14px}
+  .quiz-head .eyebrow{color:var(--gold-dim);margin:0 0 4px}
+  .quiz-head h2{margin:0;font-size:22px;letter-spacing:-.01em;color:#1b2733}
+  .who{display:flex;gap:10px;flex-wrap:wrap}
+  .who .field{display:flex;flex-direction:column;gap:3px}
+  .who label{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#6b7986}
+  .who input{font-family:inherit;font-size:14px;padding:7px 10px;border:1px solid #c4ccd4;border-radius:8px;background:#fff;min-width:140px}
+  .who input:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+
+  .score-bar{display:flex;align-items:center;gap:14px;margin:16px 0 4px;flex-wrap:wrap}
+  .score-pill{font-family:var(--mono);font-weight:700;font-size:15px;background:#1b2733;color:#fff;padding:8px 14px;border-radius:9px}
+  .score-msg{font-size:14px;color:#46535f}
+  .track{flex:1;min-width:160px;height:9px;background:#d3dae0;border-radius:6px;overflow:hidden}
+  .track > i{display:block;height:100%;width:0;background:linear-gradient(90deg,#cf4b3b,#e2b13c 55%,#2f9e57);transition:width .35s}
+
+  .q{padding:16px 0;border-bottom:1px solid var(--paper-2)}
+  .q:last-of-type{border-bottom:0}
+  .q .stem{display:flex;gap:10px;font-size:15.5px;font-weight:600;margin-bottom:10px}
+  .q .qn{font-family:var(--mono);color:var(--gold-dim);font-weight:700;flex:none}
+  .opts{display:grid;gap:8px}
+  .opt{display:flex;gap:10px;align-items:flex-start;text-align:left;cursor:pointer;font-family:inherit;font-size:14.5px;background:#fff;
+    border:1px solid #cbd3da;border-radius:9px;padding:10px 12px;color:#26323d;transition:border-color .1s,background .1s}
+  .opt:hover:not(:disabled){border-color:#8fa0ae;background:#fbfcfd}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono);font-weight:700;color:#6b7986;flex:none}
+  .opt.correct{background:#e7f6ec;border-color:var(--ok);color:#155f31}
+  .opt.correct .k{color:var(--ok)}
+  .opt.wrong{background:#fbeae8;border-color:var(--bad);color:#8a271c}
+  .opt.wrong .k{color:var(--bad)}
+  .opt:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+  .fb{margin-top:9px;font-size:13.5px;padding:9px 12px;border-radius:8px;display:none}
+  .fb.show{display:block}
+  .fb.try{background:#fff5e0;color:#7a5b14;border:1px solid #e6cf8e}
+  .fb.done{background:#eef3ee;color:#36513a;border:1px solid #cbddc9}
+  .fb b{font-weight:700}
+
+  .quiz-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:18px;flex-wrap:wrap}
+  .btn-light{font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;border-radius:9px;padding:9px 16px;border:1px solid #c4ccd4;background:#fff;color:#1b2733}
+  .btn-light:hover{background:#f1f4f7}
+  .saved{font-family:var(--mono);font-size:11px;color:#7e8b97}
+
+  /* fase + progrés de l'experiment */
+  .phase{display:flex;align-items:center;gap:12px;background:#1d2a35;border:1px solid var(--line);border-radius:10px;padding:9px 14px;flex-wrap:wrap}
+  .phase .step{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--txt-dim)}
+  .phase .step.on{color:var(--gold);font-weight:700}
+  .phase .sep{color:var(--line)}
+  .phase .clock{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--gold);background:#16212b;padding:3px 9px;border-radius:6px}
+  .runbar{height:6px;background:#16212b;border-radius:5px;overflow:hidden;margin-top:2px}
+  .runbar > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold-dim),var(--gold));transition:width .12s linear}
+  .caption{min-height:20px;font-size:13.5px;color:var(--txt);background:rgba(226,177,60,.10);border-left:3px solid var(--gold);
+    border-radius:0 8px 8px 0;padding:7px 12px;transition:opacity .25s}
+
+  /* panell de comparació abans/després */
+  .compare{margin-top:16px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:none}
+  .compare.show{display:block;animation:rise .4s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .compare h3{margin:0 0 3px;font-size:16px;color:#fff;display:flex;align-items:center;gap:8px}
+  .compare h3 .pill{font-family:var(--mono);font-size:11px;font-weight:700;color:#1b2733;background:var(--gold);padding:2px 8px;border-radius:20px}
+  .compare .sub{margin:0 0 13px;font-size:13px;color:var(--txt-dim)}
+  .cmp-shell{position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--line);touch-action:none;cursor:ew-resize;user-select:none}
+  .cmp-shell canvas{display:block;width:100%;height:auto;aspect-ratio:900/460}
+  .cmp-after{position:absolute;inset:0;overflow:hidden}
+  .cmp-tag{position:absolute;top:10px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:#fff;background:rgba(20,30,42,.78);padding:3px 9px;border-radius:6px;pointer-events:none}
+  .cmp-tag.l{left:10px}
+  .cmp-tag.r{right:10px}
+  .cmp-divider{position:absolute;top:0;bottom:0;width:2px;background:var(--gold);box-shadow:0 0 0 1px rgba(0,0,0,.25);pointer-events:none}
+  .cmp-knob{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:34px;height:34px;border-radius:50%;background:var(--gold);
+    color:#1b2733;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.35);pointer-events:none}
+  .cmp-hintline{font-family:var(--mono);font-size:11px;color:var(--txt-dim);text-align:center;margin:8px 0 0}
+  .explain{margin-top:14px;background:var(--paper);color:#1b2733;border-radius:10px;padding:14px 16px}
+  .explain h4{margin:0 0 7px;font-size:13px;font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--gold-dim)}
+  .explain p{margin:0 0 8px;font-size:14.5px;line-height:1.55}
+  .explain p:last-child{margin:0}
+  .explain .nums{display:flex;flex-wrap:wrap;gap:8px;margin:11px 0 4px}
+  .explain .stat{background:#fff;border:1px solid var(--paper-2);border-radius:9px;padding:7px 12px;min-width:96px}
+  .explain .stat .k{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#7e8b97}
+  .explain .stat .v{font-size:17px;font-weight:800;color:#1b2733}
+  .explain b{color:var(--gold-dim)}
+  .compare .again{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap}
+
+  /* selector de mode */
+  /* pestanyes principals (destacades) */
+  .ch-top{display:flex;align-items:center;gap:9px;margin-bottom:7px;flex-wrap:wrap}
+  .ch-badge{font-family:var(--mono);font-size:11px;font-weight:700;color:#1b2733;background:var(--gold);padding:3px 9px;border-radius:20px}
+  .ch-step{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+  .ch-nav{margin-left:0;width:26px;height:26px;border-radius:7px;border:1px solid var(--line);background:#1d2a35;color:var(--txt);
+    font-size:16px;line-height:1;cursor:pointer;font-family:inherit}
+  .ch-nav:hover{background:#33485a}
+  .ch-nav#chNext{margin-left:auto}
+  .ch-q{margin:0 0 8px;font-size:16px;font-weight:700;color:#fff;line-height:1.35}
+  .ch-task{font-size:13.5px;color:var(--txt);background:rgba(226,177,60,.12);border-left:3px solid var(--gold);
+    border-radius:0 8px 8px 0;padding:8px 12px}
+  .ch-task b{color:var(--gold)}
+  .ch-predict{margin-top:10px}
+  .ch-predict .pq{font-size:13px;color:var(--txt-dim);margin-bottom:6px}
+  .ch-predict .popts{display:flex;gap:8px;flex-wrap:wrap}
+  .pbtn{font-family:inherit;font-size:13px;cursor:pointer;border-radius:8px;padding:7px 13px;border:1px solid var(--line);
+    background:#1d2a35;color:var(--txt);transition:all .12s}
+  .pbtn:hover{border-color:var(--gold);background:#28394a}
+  .pbtn.sel{background:var(--gold);color:#1b2733;border-color:var(--gold);font-weight:700}
+
+  /* resultat A vs B del repte */
+  .chresult{display:none;margin-top:16px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .chresult.show{display:block;animation:rise .4s ease}
+  .chresult h3{margin:0 0 12px;font-size:16px;color:#fff;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .chresult h3 .pill{font-family:var(--mono);font-size:11px;font-weight:700;color:#1b2733;background:var(--gold);padding:2px 8px;border-radius:20px}
+  .chr-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:680px){.chr-grid{grid-template-columns:1fr}}
+  .chr-col{display:flex;flex-direction:column;gap:8px}
+  .chr-tag{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.04em;color:#1b2733;
+    background:var(--gold);padding:5px 11px;border-radius:7px;align-self:flex-start}
+  .cmp-shell.static{cursor:default}
+  .chr-meta{font-size:13px;color:var(--txt-dim);background:#1d2a35;border:1px solid var(--line);border-radius:9px;padding:9px 12px}
+  .chr-meta .row{display:flex;justify-content:space-between;gap:10px;padding:2px 0}
+  .chr-meta .row b{color:var(--gold)}
+  .chr-meta .res{margin-top:5px;padding-top:6px;border-top:1px solid var(--line);font-size:14px;color:#fff;font-weight:700}
+  .chr-conclude{margin-top:14px;background:var(--paper);color:#1b2733;border-radius:10px;padding:13px 16px;font-size:14.5px;line-height:1.55}
+  .chr-conclude b{color:var(--gold-dim)}
+  .chr-conclude .lead{font-weight:800;display:block;margin-bottom:4px;color:#1b2733}
+  .chr-check{margin-top:12px}
+  .chr-check .cq{font-size:14.5px;font-weight:600;color:#fff;margin-bottom:8px}
+  .chr-check .copts{display:grid;gap:8px}
+  .chk{display:flex;gap:10px;align-items:flex-start;text-align:left;cursor:pointer;font-family:inherit;font-size:14px;
+    background:#1d2a35;border:1px solid var(--line);border-radius:9px;padding:9px 12px;color:var(--txt);transition:all .1s}
+  .chk:hover:not(:disabled){border-color:var(--gold)}
+  .chk:disabled{cursor:default}
+  .chk.correct{background:#1f3a2a;border-color:var(--ok);color:#bfe8cf}
+  .chk.wrong{background:#3a2320;border-color:var(--bad);color:#f0c2bb}
+  .chk .k{font-family:var(--mono);font-weight:700;color:var(--gold)}
+  .chr-fb{margin-top:8px;font-size:13.5px;padding:9px 12px;border-radius:8px;display:none}
+  .chr-fb.show{display:block}
+  .chr-fb.ok{background:#1f3a2a;color:#bfe8cf;border:1px solid #2f6b46}
+  .chr-fb.no{background:#3a2320;color:#f0c2bb;border:1px solid #7a3b33}
+  .progress-dots{display:flex;gap:6px;margin-left:auto}
+  .progress-dots .dot{width:9px;height:9px;border-radius:50%;background:var(--line)}
+  .progress-dots .dot.done{background:var(--ok)}
+  .progress-dots .dot.cur{background:var(--gold)}
+
+  /* pestanyes principals (destacades) */
+  .challenge{background:linear-gradient(180deg,#2b3e4e,#243440);border:1px solid var(--gold-dim);
+    border-radius:14px;padding:15px 16px;margin-bottom:14px}
+  .tabs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:20px;
+    background:#16212b;border:1px solid var(--line);border-radius:14px;padding:8px}
+  @media (max-width:640px){.tabs{grid-template-columns:1fr}}
+  .tab{position:relative;display:flex;align-items:center;gap:12px;cursor:pointer;text-align:left;
+    background:transparent;border:1px solid transparent;border-radius:10px;padding:13px 16px;color:var(--txt-dim);
+    font-family:inherit;transition:all .14s}
+  .tab .ti{font-size:24px;line-height:1}
+  .tab .tl{display:flex;flex-direction:column;gap:1px}
+  .tab .tl b{font-size:15.5px;color:var(--txt);font-weight:800}
+  .tab .tl span{font-size:11.5px}
+  .tab:hover{background:#1f2e3a}
+  .tab[aria-pressed="true"]{background:linear-gradient(180deg,#33485a,#2a3c4b);border-color:var(--gold);
+    box-shadow:0 2px 12px rgba(0,0,0,.25)}
+  .tab[aria-pressed="true"] .tl b{color:var(--gold)}
+  .tab[aria-pressed="true"] .tl span{color:var(--txt)}
+  .tab:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .tab.locked{opacity:.78}
+  .tlock{position:absolute;top:8px;right:10px;font-size:13px}
+  .tab.unlocked .tlock{display:none}
+
+  /* conceptes bàsics */
+  .basics{margin-top:18px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px 16px}
+  .basics-title{margin:0 0 12px;font-size:14px;font-weight:700;color:#fff;letter-spacing:.01em}
+  .theory{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  @media (max-width:780px){.theory{grid-template-columns:repeat(2,1fr)}}
+  @media (max-width:440px){.theory{grid-template-columns:1fr}}
+  .tcard{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:12px 13px}
+  .tcard .n{font-family:var(--mono);font-size:10.5px;color:var(--gold);letter-spacing:.04em;font-weight:700}
+  .tcard h4{margin:4px 0 5px;font-size:13.5px;color:#fff}
+  .tcard p{margin:0;font-size:12.5px;color:var(--txt-dim);line-height:1.45}
+
+  /* vistes */
+  .view{margin-top:18px}
+
+  /* bloc de paràmetres compartit */
+  .params{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .agent-pick{margin-bottom:14px}
+  .agents{display:flex;gap:8px;flex-wrap:wrap}
+  .agent{flex:1 1 160px;display:flex;align-items:center;gap:11px;text-align:left;cursor:pointer;background:var(--panel-2);
+    border:1px solid var(--line);border-left:4px solid var(--ag,#888);color:var(--txt);border-radius:10px;padding:10px 12px;
+    font-family:inherit;font-size:14px;transition:transform .08s ease,border-color .12s ease,background .12s ease}
+  .agent:hover{transform:translateY(-1px)}
+  .agent .ic{font-size:20px;line-height:1;width:24px;text-align:center}
+  .agent .nm{font-weight:700}
+  .agent .sub{display:block;font-size:11px;color:var(--txt-dim);font-weight:400}
+  .agent[aria-pressed="true"]{background:#33485a;border-color:var(--ag);box-shadow:inset 0 0 0 1px var(--ag)}
+  .agent:disabled{opacity:.5;cursor:not-allowed}
+  .agent:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .sliders{display:grid;grid-template-columns:1fr 1fr;gap:12px 22px}
+  @media (max-width:560px){.sliders{grid-template-columns:1fr}}
+  .sld label{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;margin-bottom:5px}
+  .sld .val{font-family:var(--mono);font-size:12px;color:var(--gold);background:#1d2a35;padding:1px 7px;border-radius:6px}
+  .sld.off{opacity:.4}
+  .sld.off input{pointer-events:none}
+  .sld .na{display:none;font-size:11px;color:var(--txt-dim)}
+  .sld.off .na{display:inline}
+  .sld.locked{opacity:.45}
+  input[type=range]{width:100%;accent-color:var(--gold);cursor:pointer}
+
+  /* disposició del mode explora */
+  .explora-layout{display:grid;grid-template-columns:1fr;gap:14px}
+
+  /* qüestionari bloquejat */
+  .quiz-locked{background:var(--panel);border:1px dashed var(--gold-dim);border-radius:14px;padding:34px 24px;text-align:center}
+  .ql-icon{font-size:42px;margin-bottom:8px}
+  .quiz-locked h3{margin:0 0 8px;font-size:19px;color:#fff}
+  .quiz-locked p{margin:0 auto 10px;font-size:14.5px;color:var(--txt-dim);max-width:52ch}
+  .ql-progress{font-family:var(--mono);font-size:13px;color:var(--gold)!important;font-weight:700}
+  .quiz-locked .btn{margin-top:8px}
+
+  footer{margin-top:30px;color:var(--txt-dim);font-size:12px;text-align:center}
+  @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <svg class="contours" viewBox="0 0 200 200" aria-hidden="true">
+      <g fill="none" stroke="#e2b13c" stroke-width="1">
+        <circle cx="100" cy="100" r="22"/><circle cx="100" cy="100" r="44"/>
+        <circle cx="100" cy="100" r="66"/><circle cx="100" cy="100" r="88"/>
+        <circle cx="100" cy="100" r="110"/>
+      </g>
+    </svg>
+    <p class="eyebrow">Geologia · Biologia i Geologia · 1r d'ESO</p>
+    <h1>Modelat del relleu <span class="thin">— simulador d'agents geològics externs</span></h1>
+  </header>
+
+  <!-- ============ PESTANYES PRINCIPALS ============ -->
+  <nav class="tabs" id="tabs" aria-label="Seccions de l'activitat">
+    <button class="tab on" id="tab-explora" aria-pressed="true">
+      <span class="ti">🔍</span><span class="tl"><b>Mode Explora</b><span>Prova lliure de tots els agents</span></span>
+    </button>
+    <button class="tab" id="tab-repte" aria-pressed="false">
+      <span class="ti">🎯</span><span class="tl"><b>Mode Repte</b><span>Descobreix com actua cada paràmetre</span></span>
+    </button>
+    <button class="tab" id="tab-quiz" aria-pressed="false">
+      <span class="ti">📝</span><span class="tl"><b>Qüestionari final</b><span id="tabQuizSub">Es desbloqueja en fer els reptes</span></span>
+      <span class="tlock" id="tabLock">🔒</span>
+    </button>
+  </nav>
+
+  <!-- ============ INTRO + CONCEPTES BÀSICS (sempre visibles) ============ -->
+  <p class="lede" id="lede">Aquest simulador et permet veure com els <b>agents geològics externs</b> (riu, vent, glacera, mar i éssers vius) transformen el relleu al llarg de milers d'anys. Comença pels <b>conceptes bàsics</b> i després explora o supera els reptes.</p>
+
+  <section class="basics">
+    <p class="basics-title">📚 Conceptes bàsics — els quatre processos del modelat del relleu</p>
+    <div class="theory">
+      <div class="tcard"><div class="n">01 · Meteorització</div><h4>La roca es trenca</h4><p>La roca s'altera i es fragmenta al mateix lloc, per acció del gel, els canvis de temperatura, l'aigua o les arrels de les plantes.</p></div>
+      <div class="tcard"><div class="n">02 · Erosió</div><h4>L'agent l'arrenca</h4><p>L'aigua, el vent o el gel arrenquen i s'emporten els fragments de roca ja alterada de la superfície.</p></div>
+      <div class="tcard"><div class="n">03 · Transport</div><h4>Es trasllada</h4><p>Els materials són arrossegats cap a zones més baixes per l'agent que els mou.</p></div>
+      <div class="tcard"><div class="n">04 · Sedimentació</div><h4>Es diposita</h4><p>Quan l'agent perd força, els materials cauen i s'acumulen, i formen noves formes del relleu.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ L'ESCENARI (compartit entre Explora i Repte) ============ -->
+  <div id="stageHost">
+    <div class="stage" id="stage">
+      <div class="canvas-shell">
+        <canvas id="cv" width="900" height="460" role="img" aria-label="Simulació del paisatge en evolució"></canvas>
+        <span class="agent-tag" id="agentTag">RIU</span>
+      </div>
+
+      <div class="phase" id="phase">
+        <span class="step on" id="st1">1 · Ajusta</span><span class="sep">›</span>
+        <span class="step" id="st2">2 · Engega</span><span class="sep">›</span>
+        <span class="step" id="st3">3 · Compara</span>
+        <span class="clock" id="clock">0 anys</span>
+      </div>
+      <div class="runbar"><i id="runFill"></i></div>
+
+      <div class="controls">
+        <button class="btn primary" id="play">▶ Engega l'experiment</button>
+        <button class="btn" id="reset">↺ Reinicia</button>
+        <div class="process" id="process" aria-label="Processos geològics actius">
+          <span class="chip" data-p="met">Meteorització</span><span class="arrow">→</span>
+          <span class="chip" data-p="ero">Erosió</span><span class="arrow">→</span>
+          <span class="chip" data-p="tra">Transport</span><span class="arrow">→</span>
+          <span class="chip" data-p="sed">Sedimentació</span>
+        </div>
+      </div>
+
+      <div class="caption" id="caption"></div>
+
+      <div class="legend">
+        <span class="lg"><i class="sw dash"></i>Perfil inicial</span>
+        <span class="lg"><i class="sw" style="background:#9c6b38"></i>Roca</span>
+        <span class="lg"><i class="sw" id="sedSw" style="background:#dfb86e"></i>Sediments nous</span>
+        <span class="lg"><i class="sw" style="background:#79b6d4"></i>Aigua / gel</span>
+        <span class="counters">EROSIONAT <b id="cE">0 m³</b> · DIPOSITAT <b id="cD">0 m³</b></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ BLOC DE PARÀMETRES (compartit) ============ -->
+  <div id="paramHost">
+    <div class="params" id="params">
+      <div class="agent-pick">
+        <p class="label">Agent geològic</p>
+        <div class="agents" id="agents"></div>
+      </div>
+      <div class="param-sliders">
+        <p class="label">Paràmetres</p>
+        <div class="sliders">
+          <div class="sld">
+            <label>Intensitat de l'agent <span class="val" id="v-int">0.8</span></label>
+            <input type="range" id="s-int" min="0.2" max="1.5" step="0.05" value="0.8">
+          </div>
+          <div class="sld">
+            <label>Duresa de la roca <span class="val" id="v-hard">0.4</span></label>
+            <input type="range" id="s-hard" min="0" max="1" step="0.05" value="0.4">
+          </div>
+          <div class="sld" id="sld-veg">
+            <label>Cobertura vegetal <span class="na">— no hi influeix</span><span class="val" id="v-veg">0.3</span></label>
+            <input type="range" id="s-veg" min="0" max="1" step="0.05" value="0.3">
+          </div>
+          <div class="sld">
+            <label>Velocitat de l'animació <span class="val" id="v-spd">1×</span></label>
+            <input type="range" id="s-spd" min="0" max="2" step="1" value="1">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ VISTA: MODE EXPLORA ============ -->
+  <section class="view" id="view-explora">
+    <div class="explora-layout">
+      <div id="slotParamsExplora"></div>
+      <div id="slotStageExplora"></div>
+    </div>
+    <div class="hint" id="hint">
+      <h3 id="hint-t"></h3>
+      <p id="hint-p"></p>
+      <div class="forms" id="hint-forms"></div>
+    </div>
+
+    <!-- comparació abans/després (Explora) -->
+    <section class="compare" id="compare">
+      <h3><span class="pill" id="cmpYears">50.000 anys</span> <span id="cmpTitle">Abans i després</span></h3>
+      <p class="sub">Arrossega la línia central per comparar el paisatge inicial amb el resultat de l'erosió.</p>
+      <div class="cmp-shell" id="cmpShell">
+        <canvas id="cvBefore" width="900" height="460"></canvas>
+        <div class="cmp-after" id="cmpAfter"><canvas id="cvAfter" width="900" height="460"></canvas></div>
+        <span class="cmp-tag l">ABANS</span>
+        <span class="cmp-tag r">DESPRÉS</span>
+        <div class="cmp-divider" id="cmpDiv"></div>
+        <div class="cmp-knob" id="cmpKnob">⇆</div>
+      </div>
+      <p class="cmp-hintline">◀ arrossega per revelar ▶</p>
+      <div class="explain" id="explain"></div>
+      <div class="again">
+        <button class="btn primary" id="rerun">↺ Torna a engegar</button>
+        <button class="btn" id="tweak">⚙ Canvia els paràmetres</button>
+      </div>
+    </section>
+  </section>
+
+  <!-- ============ VISTA: MODE REPTE ============ -->
+  <section class="view" id="view-repte" style="display:none">
+    <div class="challenge" id="challenge">
+      <div class="ch-top">
+        <span class="ch-badge" id="chBadge">Repte 1 / 5</span>
+        <span class="ch-step" id="chStep">Experiment A</span>
+        <span class="progress-dots" id="chDots"></span>
+        <button class="ch-nav" id="chPrev" title="Repte anterior">‹</button>
+        <button class="ch-nav" id="chNext" title="Repte següent">›</button>
+      </div>
+      <p class="ch-q" id="chQ">…</p>
+      <div class="ch-task" id="chTask">…</div>
+      <!-- els paràmetres del repte van JUST AQUÍ sota -->
+      <div id="slotParamsRepte"></div>
+      <div class="ch-predict" id="chPredict"></div>
+    </div>
+
+    <div id="slotStageRepte"></div>
+
+    <!-- resultat A vs B -->
+    <section class="chresult" id="chresult">
+      <h3><span class="pill" id="chrPill">Resultat del repte</span> <span id="chrTitle"></span></h3>
+      <div class="chr-grid">
+        <div class="chr-col">
+          <div class="chr-tag" id="chrTagA">Experiment A</div>
+          <div class="cmp-shell static"><canvas id="cvA2" width="900" height="460"></canvas></div>
+          <div class="chr-meta" id="chrMetaA"></div>
+        </div>
+        <div class="chr-col">
+          <div class="chr-tag" id="chrTagB">Experiment B</div>
+          <div class="cmp-shell static"><canvas id="cvB2" width="900" height="460"></canvas></div>
+          <div class="chr-meta" id="chrMetaB"></div>
+        </div>
+      </div>
+      <div class="chr-conclude" id="chrConclude"></div>
+      <div class="chr-check" id="chrCheck"></div>
+      <div class="again">
+        <button class="btn primary" id="chrNext">Següent repte →</button>
+        <button class="btn" id="chrRetry">↺ Repeteix aquest repte</button>
+      </div>
+    </section>
+  </section>
+
+  <!-- ============ VISTA: QÜESTIONARI FINAL ============ -->
+  <section class="view" id="view-quiz" style="display:none">
+    <div class="quiz-locked" id="quizLocked">
+      <div class="ql-icon">🔒</div>
+      <h3>El qüestionari final encara està bloquejat</h3>
+      <p>Per fer el qüestionari, primer has de completar els <b>5 reptes</b> del Mode Repte. Així t'asseguraràs d'haver vist com actua cada agent i cada paràmetre.</p>
+      <p class="ql-progress" id="qlProgress">Reptes completats: 0 / 5</p>
+      <button class="btn primary" id="qlGoRepte">🎯 Anar al Mode Repte</button>
+    </div>
+
+    <div class="quiz" id="quiz" style="display:none">
+      <div class="quiz-head">
+        <div>
+          <p class="eyebrow">Activitat avaluable</p>
+          <h2>Qüestionari final</h2>
+        </div>
+        <div class="who">
+          <div class="field"><label for="nom">Nom</label><input id="nom" type="text" placeholder="El teu nom" autocomplete="off"></div>
+          <div class="field"><label for="grup">Grup</label><input id="grup" type="text" placeholder="Ex.: 1r ESO A" autocomplete="off"></div>
+        </div>
+      </div>
+      <div class="score-bar">
+        <span class="score-pill" id="scorePill">0 / 0 punts</span>
+        <div class="track"><i id="trackFill"></i></div>
+        <span class="score-msg" id="scoreMsg">Respon les preguntes. Tens dos intents per pregunta.</span>
+      </div>
+      <div id="qlist"></div>
+      <div class="quiz-foot">
+        <button class="btn-light" id="resetQuiz">↺ Reinicia el qüestionari</button>
+        <span class="saved" id="savedNote"></span>
+      </div>
+    </div>
+  </section>
+
+  <footer>Simulador educatiu · Modelat del relleu · Biologia i Geologia, 1r d'ESO</footer>
+</div>
+
+<script>
+/* =========================================================
+   NUCLI DE SIMULACIÓ (pur, sense DOM) — Modelat del relleu
+   Model de dues capes: roca mare (bed) + sediments (sed).
+   L'erosió treu primer sediments i després roca (segons duresa);
+   la sedimentació afegeix a la capa de sediments (color propi).
+   ========================================================= */
+var SIM = (function(){
+"use strict";
+var W=900, H=460, N=230, dx=W/(N-1);
+
+var S = {
+  agent:"riu", int:0.8, hard:0.4, veg:0.3,
+  bed:new Float32Array(N), sed:new Float32Array(N),
+  bed0:new Float32Array(N), sed0:new Float32Array(N),
+  tick:0, WL:-1,
+  snout:0, face:-1, coast0:0,
+  carve0:1, carveDone:0,
+  maxIncision:0,
+  erodedTotal:0, depositedTotal:0,
+  plants:[], covered:new Uint8Array(N),
+  events:[]            // {i, kind} — la UI els consumeix per dibuixar partícules
+};
+
+function clamp(v,a,b){return v<a?a:(v>b?b:v);}
+function lerp(a,b,t){return a+(b-a)*t;}
+function sm(t){t=clamp(t,0,1);return t*t*(3-2*t);}
+function surf(i){return S.bed[i]+S.sed[i];}
+// pseudoaleatori determinista per al terreny (perquè el reset sigui idèntic)
+function tnoise(i,f,ph){return Math.sin(i*f+ph)*0.5+Math.sin(i*f*2.7+ph*1.9)*0.27;}
+var rnd = Math.random;
+
+function pushEvent(i,kind){ if(S.events.length<80) S.events.push({i:i,kind:kind}); }
+
+function erodeAt(i,amount){
+  if(amount<=0) return 0;
+  var r=0;
+  var fromSed=Math.min(S.sed[i],amount);
+  S.sed[i]-=fromSed; r+=fromSed;
+  var rem=amount-fromSed;
+  if(rem>0){
+    var fb=rem/(0.55+1.6*S.hard);     // la roca dura resisteix més
+    fb=Math.min(fb,S.bed[i]-4);
+    if(fb>0){S.bed[i]-=fb; r+=fb;}
+  }
+  S.erodedTotal+=r;
+  return r;
+}
+function deposit(i,amount){
+  if(amount<=0) return 0;
+  S.sed[i]+=amount; S.depositedTotal+=amount; return amount;
+}
+
+/* ---------------- escenes inicials per agent ---------------- */
+function initScene(agent){
+  S.agent=agent; S.tick=0; S.WL=-1; S.face=-1; S.snout=0; S.carry=0;
+  S.maxIncision=0; S.erodedTotal=0; S.depositedTotal=0;
+  S.plants.length=0; S.events.length=0; S.covered.fill(0);
+  var i,t,b;
+
+  if(agent==="riu"){
+    for(i=0;i<N;i++){ t=i/(N-1);
+      if(t<0.55)      b = lerp(0.80,0.305, sm(t/0.55));
+      else if(t<0.72) b = lerp(0.305,0.185, sm((t-0.55)/0.17));
+      else            b = lerp(0.185,0.175, (t-0.72)/0.28);
+      b += 0.040*Math.sin(t*9+1.7)*Math.max(0,1-t*1.8) + 0.010*tnoise(i,0.55,2.0)*(1-t*0.6);
+      S.bed[i]=b*H; S.sed[i]=0;
+    }
+    S.WL=0.305*H;                       // llac/mar a la dreta: hi creixerà el delta
+  }
+  else if(agent==="vent"){
+    for(i=0;i<N;i++){ t=i/(N-1);
+      if(t<0.15)      b=0.56+0.012*tnoise(i,0.9,0.3);
+      else if(t<0.24) b=lerp(0.56,0.225, sm((t-0.15)/0.09));
+      else            b=0.225+0.006*tnoise(i,0.5,1.1);
+      S.bed[i]=b*H;
+      S.sed[i]= t<0.22 ? 0 : 9+2.5*Math.sin(t*14);   // manta de sorra a la plana
+    }
+  }
+  else if(agent==="glacera"){
+    for(i=0;i<N;i++){ t=i/(N-1);
+      b = lerp(0.86,0.30, sm(t/0.85));
+      b += 0.05*Math.sin(t*7+0.6)*(1-t) + 0.012*tnoise(i,0.6,0.9)*(1-t*0.6);
+      S.bed[i]=b*H; S.sed[i]=0;
+    }
+    var c0=0, cn=0;
+    S.snout=Math.floor((0.22+0.42*S.int)*N);
+    for(i=0;i<S.snout;i++){ var g=S.bed[i]-glacierTarget(i); if(g>0)c0+=g; }
+    S.carve0=Math.max(1,c0); S.carveDone=0;
+  }
+  else if(agent==="mar"){
+    for(i=0;i<N;i++){ t=i/(N-1);
+      if(t<0.50)      b=0.61+0.014*tnoise(i,0.7,0.4);
+      else if(t<0.58) b=lerp(0.61,0.175, sm((t-0.50)/0.08));
+      else            b=lerp(0.175,0.150, (t-0.58)/0.42);
+      S.bed[i]=b*H; S.sed[i]=0;
+    }
+    S.WL=0.345*H;
+    for(i=N-1;i>=0;i--){ if(surf(i)>=S.WL+1.5){S.coast0=i;break;} }
+  }
+  else { // bio
+    for(i=0;i<N;i++){ t=i/(N-1);
+      b = lerp(0.58,0.30, sm(t));
+      var knoll=Math.max(0,Math.sin(t*6.2+0.8)); knoll=knoll*knoll*knoll*0.06;
+      b += knoll + 0.010*tnoise(i,0.8,1.6);
+      S.bed[i]=b*H; S.sed[i]=0;
+    }
+  }
+  for(i=0;i<N;i++){S.bed0[i]=S.bed[i]; S.sed0[i]=S.sed[i];}
+}
+
+/* ---------------- RIU ----------------
+   El riu segueix el talweg (punt més baix de cada secció no és
+   necessari: treballem en perfil 1D, així que la "profunditat" de
+   la incisió fa de proxy de la vall en V). Clau per evitar el
+   serrell: erosió proporcional al cabal acumulat + DIFUSIÓ lateral
+   del vessant (els marges cauen cap al canal → V neta).            */
+function stepRiver(){
+  var WL=S.WL, i;
+  var Q=0;                                  // cabal acumulat aigües avall
+  var ke=0.0023*Math.pow(S.int,1.6)*(1-0.85*S.veg)/(0.6+1.0*S.hard);
+  for(i=1;i<N;i++){
+    Q+=1;                                   // cada cel·la aporta cabal (pluja)
+    var sf=surf(i), sl=surf(i-1)-sf;
+    if(sf>WL-0.5){
+      if(sl>0){
+        // potència de l'aigua ∝ cabal · pendent (incisió viva al curs alt)
+        var pw=ke*Math.sqrt(Q)*sl;
+        var r=erodeAt(i,Math.min(pw,0.6));
+        S.carry=(S.carry||0)+r;
+        if(r>0.05 && rnd()<0.02) pushEvent(i,"cut");
+      }
+    }
+  }
+  // ---- difusió del vessant: suavitza i obre la V (evita els pics) ----
+  var D=0.07+0.05*(1-S.hard);               // la roca tova s'esllavissa més
+  var tmp=new Float32Array(N);
+  for(i=0;i<N;i++) tmp[i]=surf(i);
+  for(i=1;i<N-1;i++){
+    var lap=tmp[i-1]+tmp[i+1]-2*tmp[i];
+    var mv=D*lap;
+    if(mv<0){ erodeAt(i,-mv); }              // cresta → s'erosiona
+    else     { deposit(i,mv*0.6); }          // depressió → s'omple de sediment
+  }
+  // ---- delta: el sediment transportat omple el cos d'aigua de la dreta ----
+  var carry=S.carry||0;
+  for(i=1;i<N;i++){
+    var s2=surf(i);
+    if(s2<WL-0.4 && carry>0){
+      var want=(WL-0.8)-s2;
+      var d=Math.min(carry*0.05, Math.max(0,want), 0.6);
+      if(d>0){deposit(i,d); carry-=d; if(rnd()<0.015)pushEvent(i,"dep");}
+    }
+  }
+  S.carry=carry*0.4;                         // part del sediment marxa mar endins
+  var mi=0;
+  for(i=4;i<N*0.6;i++){var inc=(S.bed0[i]+S.sed0[i])-surf(i); if(inc>mi)mi=inc;}
+  S.maxIncision=mi;
+}
+
+/* ---------------- VENT ----------------
+   Model conservatiu: el vent recull sorra de la superfície i la
+   diposita a SOTAVENT del punt més alt (efecte d'ombra). Així la
+   sorra no marxa de la graella: s'acumula en una duna asimètrica
+   (sobrevent suau, sotavent abrupte a l'angle de repòs) que migra.  */
+function stepWind(){
+  var i, G=Math.max(3,Math.round(13*Math.pow(S.int,1.4)));
+  // localitza la cresta actual de sorra (el cim de la duna)
+  var crest=Math.floor(N*0.55), best=-1;
+  for(i=Math.floor(N*0.24);i<N-3;i++){ if(S.sed[i]>best){best=S.sed[i]; crest=i;} }
+
+  for(var g=0;g<G;g++){
+    // agafa sorra del sobrevent (esquerra de la cresta) i de la manta
+    var hi=Math.min(crest, Math.floor(N*0.80));
+    var src=Math.floor(N*0.24 + rnd()*(hi-N*0.24+1));
+    if(src<1||src>=N-2) continue;
+    if(S.sed[src]>0.05 && rnd()>S.veg*0.9){
+      var q=Math.min(S.sed[src],0.12*(1-0.7*S.veg));
+      S.sed[src]-=q;
+      // deposita a sotavent immediat de la cresta (creix la duna cap amunt i endavant)
+      var dst=crest+1+Math.floor(rnd()*2);
+      if(dst>Math.floor(N*0.84)) dst=Math.floor(N*0.78)+Math.floor(rnd()*10);
+      if(dst>=N-1) dst=N-2;
+      S.sed[dst]+=q;
+      S.erodedTotal+=q; S.depositedTotal+=q;
+      if(rnd()<0.02)pushEvent(dst,"dep");
+    }
+  }
+  // deflació de la roca nua exposada de l'altiplà (esquerra)
+  for(i=2;i<N*0.24;i++){
+    if(S.sed[i]<0.02){ var r=erodeAt(i,0.011*Math.pow(S.int,1.4)/(0.35+2.2*S.hard)); if(r>0&&rnd()<0.006)pushEvent(i,"cut"); }
+  }
+  // ANGLE DE REPÒS: sobrevent suau (pendent baix), sotavent abrupte
+  var REP_up=2.0, REP_lee=4.2, m, d;
+  // cap amunt-vent (de dreta a esquerra el pendent de pujada es manté suau)
+  for(i=0;i<N-1;i++){ d=S.sed[i]-S.sed[i+1]; if(d>REP_up){m=(d-REP_up)*0.25; m=Math.min(m,S.sed[i]); S.sed[i]-=m; S.sed[i+1]+=m;} }
+  // sotavent (allau just per sota l'angle de repòs, fa la cara abrupta)
+  for(i=N-1;i>0;i--){ d=S.sed[i]-S.sed[i-1]; if(d>REP_lee){m=(d-REP_lee)*0.5; m=Math.min(m,S.sed[i]); S.sed[i]-=m; S.sed[i-1]+=m;} }
+}
+
+/* ---------------- GLACERA ---------------- */
+function glacierTarget(i){
+  var p=clamp(i/Math.max(1,S.snout),0,1);
+  return H*(0.30+(0.84-0.30)*Math.pow(1-p,2.2));   // capçalera dreta, llengua plana → perfil en U
+}
+function stepGlacier(){
+  S.snout=Math.floor((0.22+0.42*S.int)*N);
+  var a=0.00082*Math.pow(S.int,1.3)/(0.45+1.7*S.hard);
+  var removed=0, i, gap=0;
+  for(i=0;i<S.snout;i++){
+    var e=surf(i)-glacierTarget(i);
+    if(e>0){
+      gap+=e;
+      var c=Math.min(e*a,0.35);
+      removed+=erodeAt(i,c);
+      if(c>0.05&&rnd()<0.01)pushEvent(i,"cut");
+    }
+  }
+  S.carveDone=clamp(1-gap/S.carve0,0,1);
+  // morrena frontal: dipòsit limitat (no creix indefinidament)
+  var k;
+  for(k=0;k<=6 && removed>0;k++){
+    i=S.snout+k; if(i>=N)break;
+    var bump=26*Math.sin((k/6)*Math.PI);
+    var cap=(S.bed0[i]+S.sed0[i])+bump;
+    if(surf(i)<cap){
+      var d=Math.min(removed, cap-surf(i), 0.25);
+      deposit(i,d); removed-=d;
+    }
+  }
+}
+
+/* ---------------- MAR ---------------- */
+function stepSea(){
+  var WL=S.WL, plat=WL-5, i;
+  var face=-1;
+  for(i=N-1;i>=0;i--){ if(surf(i)>=WL+1.5){face=i;break;} }
+  S.face=face;
+  if(face<0) return;
+  var hit=(S.tick%46)<9;
+  var power=hit?5:0.3;
+  var k=0.30*Math.pow(S.int,1.5)*power/(0.4+1.6*S.hard);
+  var room=surf(face)-plat;
+  var r=erodeAt(face, Math.min(k,Math.max(0,room)));
+  if(face-1>=0){
+    var room2=surf(face-1)-plat;
+    r+=erodeAt(face-1, Math.min(k*0.18, Math.max(0,room2)));
+  }
+  if(hit && S.tick%46===2) pushEvent(face,"hit");
+  if(r>0.4) pushEvent(face,"frag");
+  // platja: una part del material cau a la base; la resta se l'emporta el mar
+  var load=r*0.70, j;
+  for(j=face+1;j<Math.min(N,face+16)&&load>0;j++){
+    var cap=(WL+2.0)-surf(j);
+    if(cap>0){var d=Math.min(load,cap,0.4); deposit(j,d); load-=d;}
+  }
+}
+
+/* ---------------- ÉSSERS VIUS ---------------- */
+function recomputeCover(){
+  S.covered.fill(0);
+  for(var p=0;p<S.plants.length;p++){
+    var pi=S.plants[p].i;
+    for(var k=-4;k<=4;k++){var j=pi+k; if(j>=0&&j<N)S.covered[j]=1;}
+  }
+}
+function stepBio(){
+  var target=Math.round(30*S.veg), i;
+  if(S.plants.length<target && S.tick%14===0){
+    var tries=0;
+    while(tries++<20){
+      i=Math.floor(N*0.06+rnd()*N*0.86);
+      var ok=true;
+      for(var p=0;p<S.plants.length;p++) if(Math.abs(S.plants[p].i-i)<5){ok=false;break;}
+      if(ok){
+        S.plants.push({i:i,g:0,kind:rnd()<0.35?"tree":"bush",seed:rnd()*7});
+        recomputeCover();
+        break;
+      }
+    }
+  }
+  if(S.plants.length>target){ S.plants.length=target; recomputeCover(); }
+
+  for(var p2=0;p2<S.plants.length;p2++){
+    var pl=S.plants[p2];
+    pl.g=Math.min(1,pl.g+0.004*S.int);          // creixen visiblement més de pressa
+    if(pl.g>0.12){
+      var w=0.0052*S.int*pl.g/(0.3+2.4*S.hard);  // les arrels fracturen la roca a sota
+      var r=erodeAt(pl.i,w);
+      deposit(Math.min(N-1,pl.i+1), r*0.9);     // fragments al peu (tartera)
+      if(rnd()<0.01)pushEvent(pl.i,"frag");
+    }
+  }
+  // pluja: el sòl NU es renta amb força; el protegit gairebé no es mou
+  for(i=1;i<N-1;i++){
+    if(!S.covered[i]){
+      var rr=erodeAt(i,0.0125*Math.pow(S.int,1.4)/(0.45+1.6*S.hard));             // erosió marcada a les zones nues
+      deposit(i+1, rr*0.6);                       // rentat pendent avall
+    }else{
+      deposit(i,0.0016*S.int);                    // sota la vegetació: es forma sòl (humus)
+    }
+  }
+  // arrodoneix les vores entre zones protegides i nues
+  var D=0.016, tmp=new Float32Array(N);
+  for(i=0;i<N;i++) tmp[i]=surf(i);
+  for(i=1;i<N-1;i++){
+    var lap=tmp[i-1]+tmp[i+1]-2*tmp[i];
+    var mv=D*lap;
+    if(mv<0){ erodeAt(i,-mv*0.5); } else { deposit(i,mv*0.5); }
+  }
+}
+
+function step(){
+  if(S.agent==="riu") stepRiver();
+  else if(S.agent==="vent") stepWind();
+  else if(S.agent==="glacera") stepGlacier();
+  else if(S.agent==="mar") stepSea();
+  else stepBio();
+  for(var i=0;i<N;i++){
+    if(S.bed[i]<4)S.bed[i]=4;
+    if(S.sed[i]<0)S.sed[i]=0;
+    if(S.bed[i]+S.sed[i]>H-8)S.sed[i]=Math.max(0,(H-8)-S.bed[i]);
+  }
+  S.tick++;
+}
+
+return {S:S, W:W, H:H, N:N, dx:dx, surf:surf, initScene:initScene, step:step,
+        clamp:clamp, lerp:lerp, sm:sm};
+})();
+if(typeof module!=="undefined") module.exports=SIM;
+
+</script>
+
+<script>
+"use strict";
+/* =========================================================
+   CAPA VISUAL I D'INTERFÍCIE
+   ========================================================= */
+const store={
+  get(k){try{return localStorage.getItem(k);}catch(e){return null;}},
+  set(k,v){try{localStorage.setItem(k,v);}catch(e){}},
+  del(k){try{localStorage.removeItem(k);}catch(e){}}
+};
+const reduceMotion=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const S=SIM.S, N=SIM.N, W=SIM.W, H=SIM.H, dx=SIM.dx;
+const clamp=SIM.clamp, lerp=SIM.lerp;
+const cv=document.getElementById("cv");
+let ctx=cv.getContext("2d");
+const mainCtx=ctx;
+function fitDPR(){
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr);
+  mainCtx.setTransform(dpr,0,0,dpr,0,0);
+}
+fitDPR();
+window.addEventListener("resize",fitDPR);
+
+const X=i=>i*dx, Yv=e=>H-e;
+const sf=i=>S.bed[i]+S.sed[i], sf0=i=>S.bed0[i]+S.sed0[i];
+const frac=v=>v-Math.floor(v);
+const rr=(a,b)=>a+Math.random()*(b-a);
+function sfAtX(x){const i=clamp(Math.round(x/dx),0,N-1);return sf(i);}
+
+/* fases: 'setup' (ajustant) · 'running' (simulant) · 'done' (comparant) */
+let phase="setup", uiTick=0, current="riu";
+let runTicks=0;
+const RUN_LEN=2600;          // durada de l'experiment en passos de simulació
+const YEARS=50000;           // equivalència narrativa
+let stepsPerFrame=7;         // pas base; un experiment dura ~6 s a velocitat 1×
+let speedMul=1;              // 0.5× / 1× / 2× (control de velocitat)
+let snapBefore=null;         // perfil inicial capturat
+let captionTimer=null, captionQueue=[], captionIdx=0;
+let parts=[], hazeP=[], saltP=[], snowP=[], rainP=[], sedInitMax=0;
+const clouds=[{x:130,y:58,s:1.0},{x:470,y:92,s:0.65},{x:740,y:46,s:0.85}];
+
+const AGENTS={
+  riu:{name:"El riu (agent fluvial)",tag:"RIU",color:"#2f8fbf",icon:"🌊",short:"Riu",sub:"aigua corrent",
+    sedColor:"#dfb86e",vegOn:true,
+    hint:"L'aigua excava al curs alt (compara la superfície amb la línia discontínua del perfil inicial) i, quan perd força, diposita els sediments: primer a la plana al·luvial i després dins de l'aigua, on el delta avança. El requadre mostra el tall transversal de la vall en V.",
+    forms:["Vall en V","Plana al·luvial","Delta"],
+    proc:{met:false,ero:true,tra:true,sed:true}},
+  vent:{name:"El vent (agent eòlic)",tag:"VENT",color:"#caa15a",icon:"🍃",short:"Vent",sub:"agent eòlic",
+    sedColor:"#e9c87d",vegOn:true,
+    hint:"El vent arrenca la sorra (deflació), la transporta a saltets i la diposita a sotavent: la duna creix asimètrica (vessant suau de cara al vent, vessant abrupte al darrere) i avança. Apuja la cobertura vegetal i veuràs com el procés es frena.",
+    forms:["Duna","Deflació","Vall eòlica"],
+    proc:{met:false,ero:true,tra:true,sed:true}},
+  glacera:{name:"La glacera (agent glacial)",tag:"GLACERA",color:"#7fb4cf",icon:"❄️",short:"Glacera",sub:"gel en moviment",
+    sedColor:"#c9b289",vegOn:false,
+    hint:"La massa de gel llisca pendent avall i excava el fons de la vall, que s'eixampla i s'aplana: al requadre veuràs com el tall transversal passa de V a U. Al front, el gel es fon i hi diposita els materials que arrossegava: la morrena.",
+    forms:["Vall en U","Morrena","Circ glacial"],
+    proc:{met:false,ero:true,tra:true,sed:true}},
+  mar:{name:"El mar (agent litoral)",tag:"MAR",color:"#2b7aa3",icon:"⛵",short:"Mar",sub:"onades",
+    sedColor:"#e8c474",vegOn:false,
+    hint:"Les onades piquen el penya-segat per la base, a cada cop salten fragments de roca i la paret retrocedeix terra endins. On hi havia la roca queda una plataforma d'abrasió arran d'aigua, i part del material arrencat s'acumula formant la platja.",
+    forms:["Penya-segat","Plataforma d'abrasió","Platja"],
+    proc:{met:false,ero:true,tra:true,sed:true}},
+  bio:{name:"Els éssers vius (erosió biològica)",tag:"BIO",color:"#4e8d4a",icon:"🌱",short:"Éssers vius",sub:"erosió biològica",
+    sedColor:"#6e4f30",vegOn:true,
+    hint:"Plou suaument: el sòl nu es renta pendent avall, però on creixen plantes les arrels el subjecten — i alhora fracturen la roca de sota (mira les esquerdes) i s'hi forma sòl. Compara les zones amb vegetació i sense amb la línia discontínua.",
+    forms:["Meteorització biològica","Líquens","Formació de sòl"],
+    proc:{met:true,ero:true,tra:true,sed:true}}
+};
+
+/* ---------------- ambient i partícules ---------------- */
+function initAmbient(){
+  hazeP=[];saltP=[];snowP=[];rainP=[];parts=[];
+  if(reduceMotion)return;
+  if(current==="vent"){
+    for(let i=0;i<48;i++)hazeP.push({x:Math.random()*W,y:Math.random()*H*0.6,sp:0.7+Math.random()});
+    for(let i=0;i<22;i++)saltP.push({x:W*0.2+Math.random()*W*0.6,ph:Math.random()*6});
+  }
+  if(current==="glacera")for(let i=0;i<30;i++)snowP.push({x:Math.random()*W,y:Math.random()*H,v:0.5+Math.random()*0.8});
+  if(current==="bio")for(let i=0;i<40;i++)rainP.push({x:Math.random()*W,y:Math.random()*H});
+}
+function drainEvents(){
+  while(S.events.length){
+    const e=S.events.pop();
+    if(reduceMotion)continue;
+    const x=X(e.i), y=Yv(sf(e.i));
+    if(e.kind==="cut"){for(let k=0;k<3;k++)parts.push({x:x+rr(-3,3),y:y+rr(0,3),vx:rr(-.5,.5),vy:rr(-1,-.2),g:.06,l:26,c:[120,85,45],s:1.8});}
+    else if(e.kind==="dep"){parts.push({x:x,y:y-2,vx:rr(-.2,.2),vy:-.35,g:0,l:22,c:[226,177,60],s:2});}
+    else if(e.kind==="hit"){for(let k=0;k<7;k++)parts.push({x:x+rr(-2,5),y:y,vx:rr(-1.4,1),vy:rr(-2.8,-1.1),g:.13,l:30,c:[255,255,255],s:rr(1.4,2.6)});}
+    else if(e.kind==="frag"){for(let k=0;k<3;k++)parts.push({x:x,y:y-rr(4,28),vx:rr(.3,1.3),vy:rr(-.6,.2),g:.16,l:46,c:[110,80,50],s:2.4});}
+  }
+  if(parts.length>140)parts.splice(0,parts.length-140);
+}
+function drawParts(){
+  for(let i=parts.length-1;i>=0;i--){
+    const p=parts[i];
+    p.x+=p.vx;p.y+=p.vy;p.vy+=p.g;p.l--;
+    if(p.l<=0){parts.splice(i,1);continue;}
+    ctx.fillStyle="rgba("+p.c[0]+","+p.c[1]+","+p.c[2]+","+Math.min(1,p.l/18)+")";
+    ctx.fillRect(p.x,p.y,p.s,p.s);
+  }
+}
+
+/* ---------------- escena: cel, roca, sediments ---------------- */
+const SKY={riu:["#a9d8ee","#e6f3f6","#f2f8f5"],vent:["#efd6a4","#f6e9cd","#faf3e4"],
+  glacera:["#c0dbe9","#e8f1f7","#f4f8fa"],mar:["#9fcfe6","#dceef5","#ecf6f8"],bio:["#b6dde4","#e2f1ec","#f0f7ef"]};
+function drawSky(){
+  const sk=SKY[current];
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,sk[0]);g.addColorStop(0.55,sk[1]);g.addColorStop(1,sk[2]);
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  // sol
+  const sx=current==="vent"?110:W-105, sy=62;
+  ctx.fillStyle="rgba(255,236,170,0.35)";ctx.beginPath();ctx.arc(sx,sy,44,0,7);ctx.fill();
+  ctx.fillStyle=current==="glacera"?"#fdf6df":"#ffe9a0";
+  ctx.beginPath();ctx.arc(sx,sy,23,0,7);ctx.fill();
+  // núvols a la deriva
+  ctx.fillStyle="rgba(255,255,255,0.8)";
+  for(const c of clouds){
+    const cx=((c.x+uiTick*0.06*c.s)%(W+200))-100, cy=c.y, s=c.s;
+    ctx.beginPath();
+    ctx.ellipse(cx,cy,30*s,10*s,0,0,7);
+    ctx.ellipse(cx+20*s,cy-6*s,20*s,9*s,0,0,7);
+    ctx.ellipse(cx-22*s,cy-3*s,18*s,8*s,0,0,7);
+    ctx.fill();
+  }
+}
+const BANDS=[[0.00,"#caa05a"],[0.16,"#b9853f"],[0.34,"#9c6b38"],[0.52,"#825733"],[0.72,"#6a472d"],[0.88,"#553a27"]];
+function bedPath(){
+  ctx.beginPath();
+  ctx.moveTo(0,H);ctx.lineTo(0,Yv(S.bed[0]));
+  for(let i=1;i<N;i++)ctx.lineTo(X(i),Yv(S.bed[i]));
+  ctx.lineTo(W,Yv(S.bed[N-1]));ctx.lineTo(W,H);ctx.closePath();
+}
+function drawBedrock(){
+  ctx.save();bedPath();ctx.clip();
+  for(let b=0;b<BANDS.length;b++){
+    const y0=BANDS[b][0]*H, y1=(b+1<BANDS.length?BANDS[b+1][0]:1)*H;
+    ctx.fillStyle=BANDS[b][1];ctx.fillRect(0,H-y1,W,y1-y0);
+    ctx.strokeStyle="rgba(40,25,10,0.12)";ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(0,H-y1);ctx.lineTo(W,H-y1);ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawSediment(){
+  const col=AGENTS[current].sedColor;
+  let i=0;
+  while(i<N){
+    if(S.sed[i]>0.25){
+      let j=i;while(j<N&&S.sed[j]>0.25)j++;
+      ctx.beginPath();
+      ctx.moveTo(X(i),Yv(S.bed[i]));
+      for(let k=i;k<j;k++)ctx.lineTo(X(k),Yv(sf(k)));
+      for(let k=j-1;k>=i;k--)ctx.lineTo(X(k),Yv(S.bed[k]));
+      ctx.closePath();
+      ctx.fillStyle=col;ctx.fill();
+      ctx.beginPath();
+      for(let k=i;k<j;k++){const x=X(k),y=Yv(sf(k));k===i?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+      ctx.strokeStyle="rgba(90,60,25,0.45)";ctx.lineWidth=1;ctx.stroke();
+      ctx.fillStyle="rgba(70,45,15,0.22)";
+      for(let k=i;k<j;k+=2){
+        const th=S.sed[k];if(th<2.5)continue;
+        const nd=Math.min(3,Math.floor(th/5)+1);
+        for(let d=0;d<nd;d++){
+          const fr=frac(Math.sin(k*78.233+d*37.719)*43758.5453);
+          ctx.fillRect(X(k)+(frac(fr*91)*3-1.5),Yv(S.bed[k]+th*(0.15+0.7*fr)),1.4,1.4);
+        }
+      }
+      i=j;
+    } else i++;
+  }
+}
+function drawSurfaceLine(){
+  ctx.beginPath();
+  for(let i=0;i<N;i++){const x=X(i),y=Yv(sf(i));i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.strokeStyle="#54381f";ctx.lineWidth=2;ctx.stroke();
+}
+function drawGhost(){
+  ctx.save();ctx.setLineDash([6,5]);ctx.lineWidth=1.6;ctx.strokeStyle="rgba(20,30,42,0.62)";
+  ctx.beginPath();
+  for(let i=0;i<N;i++){const x=X(i),y=Yv(sf0(i));i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.stroke();ctx.restore();
+}
+/* dibuixa un arbret o arbust a (x, base-del-terra) amb mida 0..1 */
+function drawPlant(x,gy,size,kind,seed){
+  const g=clamp(size,0,1);
+  if(g<0.04)return;
+  if(kind==="tree"){
+    const th=7+19*g, tw=1.2+1.4*g;
+    ctx.fillStyle="#5b4226";ctx.fillRect(x-tw/2,gy-th,tw,th);
+    ctx.fillStyle="#3f7d44";circ(x-3.4*g,gy-th,2.6+5.4*g);
+    ctx.fillStyle="#5fa055";circ(x+3.4*g,gy-th+0.6,2.4+5*g);
+    ctx.fillStyle="#4e8d4a";circ(x,gy-th-2.6*g,3.1+6.6*g);
+    ctx.fillStyle="rgba(70,130,66,0.55)";circ(x+1.4,gy-th-4*g,1.6+3*g);
+  }else{
+    ctx.fillStyle="#4e8d4a";circ(x-3*g,gy-2.4,2.2+4.4*g);circ(x+3*g,gy-2.4,2.2+4.4*g);
+    ctx.fillStyle="#5fa055";circ(x,gy-4.4*g-1,2.6+5*g);
+  }
+}
+function drawVegTufts(){
+  if(!AGENTS[current].vegOn||current==="bio")return;
+  // el NOMBRE d'arbres creix amb la cobertura: de pocs a un bosc dens
+  const count=Math.round(S.veg*34);if(count<=0)return;
+  for(let k=0;k<count;k++){
+    const h=frac(Math.sin((k+1)*53.17)*1349.13);     // posició estable per índex
+    const i=Math.floor(4+h*(N-9));
+    if(S.WL>0&&sf(i)<S.WL+0.6)continue;               // res sota l'aigua
+    const x=X(i)+(frac(h*97.3)*5-2.5), y=Yv(sf(i));
+    const kind=frac(h*41.7)<0.4?"tree":"bush";
+    const size=0.55+0.45*frac(h*7.13);
+    drawPlant(x,y,size,kind,k);
+  }
+}
+
+/* ---------------- aigua, riu, mar ---------------- */
+function waterSpans(){
+  const sp=[];let a=-1;
+  for(let i=0;i<N;i++){
+    if(sf(i)<S.WL-0.2){if(a<0)a=i;}
+    else if(a>=0){sp.push([a,i-1]);a=-1;}
+  }
+  if(a>=0)sp.push([a,N-1]);
+  return sp;
+}
+function drawWater(){
+  if(S.WL<0)return;
+  const yw=Yv(S.WL);
+  ctx.fillStyle="rgba(46,124,164,0.55)";
+  ctx.beginPath();
+  for(let i=0;i<N;i++){
+    if(sf(i)<S.WL-0.2)ctx.rect(X(i)-dx/2,yw,dx+0.6,Yv(sf(i))-yw);
+  }
+  ctx.fill();
+  const spans=waterSpans(), nw=current==="mar"?3:2;
+  ctx.lineWidth=1.2;
+  for(const sp of spans){
+    if(sp[1]-sp[0]<5)continue;
+    for(let r=0;r<nw;r++){
+      ctx.strokeStyle="rgba(255,255,255,"+(0.5-r*0.12)+")";
+      ctx.beginPath();
+      for(let x=X(sp[0]);x<=X(sp[1]);x+=6){
+        const yy=yw+3+r*6+Math.sin(x*0.045+uiTick*0.1+r*1.7)*1.8;
+        x===X(sp[0])?ctx.moveTo(x,yy):ctx.lineTo(x,yy);
+      }
+      ctx.stroke();
+    }
+  }
+}
+function drawRiverRibbon(){
+  let shore=N-1;
+  for(let i=0;i<N;i++){if(sf(i)<S.WL-0.2){shore=i;break;}}
+  ctx.lineCap="round";
+  ctx.beginPath();
+  for(let i=0;i<=shore;i++){const x=X(i),y=Yv(sf(i))-1;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.strokeStyle="rgba(52,148,196,0.85)";ctx.lineWidth=2+2.4*S.int;ctx.stroke();
+  if(!reduceMotion){
+    ctx.save();ctx.setLineDash([7,11]);ctx.lineDashOffset=-uiTick*1.1;
+    ctx.strokeStyle="rgba(255,255,255,0.55)";ctx.lineWidth=1;ctx.stroke();ctx.restore();
+  }
+  ctx.lineCap="butt";
+}
+function drawSeaExtras(){
+  const face=S.face;if(face<0)return;
+  const yw=Yv(S.WL), xf=X(face);
+  // gavines
+  ctx.strokeStyle="rgba(27,39,51,0.6)";ctx.lineWidth=1.4;
+  for(let b=0;b<2;b++){
+    const bx=W-((uiTick*0.35+b*230)%(W*0.55))-40, by=58+b*26+Math.sin(uiTick*0.05+b)*4;
+    ctx.beginPath();
+    ctx.moveTo(bx-6,by);ctx.quadraticCurveTo(bx-3,by-4,bx,by);
+    ctx.quadraticCurveTo(bx+3,by-4,bx+6,by);ctx.stroke();
+  }
+  if(reduceMotion)return;
+
+  // --- rellotge d'onada basat en FOTOGRAMES (independent de la velocitat de simulació) ---
+  // període llarg perquè es vegi bé cada onada; les ones grosses (intensitat alta) van una mica més de pressa
+  const period=Math.round(170-60*Math.min(1,S.int/1.5));
+  if(typeof window.__wavePhase==="undefined")window.__wavePhase=0;
+  // avança el rellotge una vegada per fotograma, modulat per la velocitat de l'animació
+  window.__wavePhase=(window.__wavePhase+ (typeof speedMul!=="undefined"?speedMul:1))%period;
+  const ph=window.__wavePhase, prog=ph/period;
+  const amp=5+12*S.int;                          // onades més altes com més intensitat
+
+  // onades de fons que onegen suaument a tota la superfície del mar
+  ctx.strokeStyle="rgba(255,255,255,0.30)";ctx.lineWidth=1.2;
+  for(let r=0;r<2;r++){
+    ctx.beginPath();
+    for(let x=xf+4;x<=W;x+=6){
+      const yy=yw+5+r*7+Math.sin(x*0.03 - uiTick*0.04 + r*1.4)*2.2;
+      x===xf+4?ctx.moveTo(x,yy):ctx.lineTo(x,yy);
+    }
+    ctx.stroke();
+  }
+
+  // onada principal que s'acosta lentament al penya-segat
+  const travel=Math.min(1,prog/0.72);            // tarda el 72% del cicle a arribar
+  const crest=lerp(W, xf+5, travel);
+  // cresta d'aigua amb volum (cos blau + escuma blanca a sobre)
+  ctx.fillStyle="rgba(95,165,200,0.55)";
+  ctx.beginPath();
+  ctx.moveTo(crest-4,yw+amp*0.7);
+  ctx.quadraticCurveTo(crest+10,yw-amp*1.1, crest+34,yw+1);
+  ctx.lineTo(crest+34,yw+amp);ctx.lineTo(crest-4,yw+amp);ctx.closePath();ctx.fill();
+  // línia d'escuma blanca a la cresta
+  ctx.strokeStyle="rgba(255,255,255,0.85)";ctx.lineWidth=2.2+1.4*S.int;
+  ctx.beginPath();
+  ctx.moveTo(crest-4,yw+amp*0.6);
+  ctx.quadraticCurveTo(crest+10,yw-amp*1.05, crest+30,yw);
+  ctx.stroke();
+
+  // IMPACTE: quan la cresta arriba al penya-segat, esclat d'escuma enlairant-se per la paret
+  if(travel>=1){
+    const burst=clamp(1-(prog-0.72)/0.28,0,1);   // s'esvaeix durant la resta del cicle
+    const h=amp*(2.0+1.6*S.int)*burst;
+    ctx.fillStyle="rgba(255,255,255,"+(0.6+0.3*burst)+")";
+    // cresta d'escuma enganxada a la paret
+    ctx.beginPath();ctx.ellipse(xf+2,yw-h*0.35,7+5*S.int,h*0.75+6,0,0,7);ctx.fill();
+    // ruixim que salta enlaire per la cara del penya-segat
+    const drops=Math.round((8+14*S.int)*burst);
+    for(let s=0;s<drops;s++){
+      const a=frac(Math.sin((s+1)*91.7+Math.floor(uiTick/4))*733.1);
+      const rise=(uiTick%period)*0.0;            // estàtic dins del fotograma
+      const px=xf+2 - a*6 + Math.sin(s)*2;
+      const py=yw - h*(0.2+a*1.1);
+      ctx.fillRect(px, py, 1.8+1.6*a, 1.8+1.6*a);
+    }
+    // ruixim a la base del penya-segat
+    ctx.fillStyle="rgba(255,255,255,0.7)";
+    ctx.beginPath();ctx.arc(xf+5,yw,5+5*S.int*burst,0,7);ctx.fill();
+  }
+}
+
+/* ---------------- glacera ---------------- */
+function thAt(i,sn){
+  const p=clamp(i/Math.max(1,sn),0,1);
+  return (Math.pow(1-p,0.8)*58+4)*(0.92+0.08*Math.sin(i*0.35+1));
+}
+function drawGlacier(){
+  const sn=Math.min(S.snout,N-1);if(sn<3)return;
+  // cos de gel
+  ctx.beginPath();
+  ctx.moveTo(0,Yv(sf(0))-thAt(0,sn));
+  for(let i=1;i<=sn;i++)ctx.lineTo(X(i),Yv(sf(i))-thAt(i,sn));
+  for(let i=sn;i>=0;i--)ctx.lineTo(X(i),Yv(sf(i))-0.5);
+  ctx.closePath();
+  const g=ctx.createLinearGradient(0,40,0,H*0.7);
+  g.addColorStop(0,"rgba(255,255,255,0.95)");g.addColorStop(1,"rgba(193,225,240,0.92)");
+  ctx.fillStyle=g;ctx.fill();
+  ctx.strokeStyle="rgba(122,169,194,0.95)";ctx.lineWidth=1.5;ctx.stroke();
+  // línies de flux (es mouen més de pressa com més intensitat: el gel flueix!)
+  for(const f of [0.32,0.62]){
+    ctx.save();ctx.setLineDash([9,7]);
+    if(!reduceMotion)ctx.lineDashOffset=-uiTick*(0.4+0.9*S.int);
+    ctx.strokeStyle="rgba(140,185,210,0.7)";ctx.lineWidth=1;
+    ctx.beginPath();
+    for(let i=2;i<sn-1;i++){const x=X(i),y=Yv(sf(i))-thAt(i,sn)*f;i===2?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+    ctx.stroke();ctx.restore();
+  }
+  // esquerdes (crevasses) on el llit és més inclinat
+  ctx.strokeStyle="rgba(96,146,172,0.65)";ctx.lineWidth=1;
+  for(let i=8;i<sn-3;i+=9){
+    if(sf(i-3)-sf(i+3)>5){
+      ctx.beginPath();
+      ctx.moveTo(X(i),Yv(sf(i))-thAt(i,sn)+3);
+      ctx.lineTo(X(i)+2,Yv(sf(i))-thAt(i,sn)*0.4);
+      ctx.stroke();
+    }
+  }
+  // torrent de desglaç al front (transport aigües avall)
+  if(sn<N-5){
+    ctx.beginPath();
+    for(let i=sn;i<N;i++){const x=X(i),y=Yv(sf(i))-1;i===sn?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+    ctx.strokeStyle="rgba(70,150,195,0.75)";ctx.lineWidth=1.6;ctx.stroke();
+  }
+  // neu
+  if(!reduceMotion){
+    ctx.fillStyle="rgba(255,255,255,0.85)";
+    for(const p of snowP){
+      p.y+=p.v;p.x-=0.3;
+      if(p.y>Yv(sfAtX(p.x))||p.y>H){p.y=-4;p.x=Math.random()*W;}
+      ctx.fillRect(p.x,p.y,1.8,1.8);
+    }
+  }
+}
+
+/* ---------------- vent ---------------- */
+function drawWindExtras(){
+  if(!reduceMotion){
+    // com més intensitat, més ratlles de vent visibles i més de pressa
+    const nHaze=Math.round(hazeP.length*(0.3+0.7*Math.min(1,S.int/1.5)));
+    ctx.strokeStyle="rgba(170,130,60,0.5)";ctx.lineWidth=1+1.2*Math.min(1,S.int/1.5);
+    for(let k=0;k<nHaze;k++){
+      const p=hazeP[k];
+      p.x+=p.sp*2.4*S.int;
+      if(p.x>W+6){p.x=-6;p.y=Math.random()*H*0.6;}
+      ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x+4+5*S.int,p.y);ctx.stroke();
+    }
+    const nSalt=Math.round(saltP.length*(0.25+0.75*Math.min(1,S.int/1.5)));
+    ctx.fillStyle="#8a6326";
+    for(let k=0;k<nSalt;k++){
+      const p=saltP[k];
+      p.x+=2.2*S.int;p.ph+=0.5;
+      if(p.x>W*0.92){p.x=W*0.18+Math.random()*W*0.2;}
+      const y=Yv(sfAtX(p.x))-Math.abs(Math.sin(p.ph))*9-1;
+      ctx.fillRect(p.x,y,1.8,1.8);
+    }
+  }
+}
+
+/* ---------------- éssers vius ---------------- */
+function circ(x,y,r){ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill();}
+function drawBioExtras(){
+  // plantes amb esquerdes a la roca
+  for(const pl of S.plants){
+    const x=X(pl.i), gy=Yv(sf(pl.i)), g=pl.g;
+    ctx.strokeStyle="rgba(50,33,18,0.8)";ctx.lineWidth=1;
+    for(const c of [-1,1]){
+      ctx.beginPath();ctx.moveTo(x,gy+1);
+      ctx.lineTo(x+c*(1.5+3*g),gy+4+7*g);
+      ctx.lineTo(x+c*(0.5+5*g),gy+9+13*g);
+      ctx.stroke();
+    }
+    if(g<0.05)continue;
+    drawPlant(x,gy,g,pl.kind,pl.i);
+  }
+  // líquens colonitzant la roca nua
+  const cnt=Math.min(34,Math.floor(S.tick/70));
+  for(let k=0;k<cnt;k++){
+    const h1=frac(Math.sin((k+1)*127.1)*311.7);
+    const i=Math.floor(h1*(N-10))+5;
+    if(S.covered[i])continue;
+    const lx=X(i)+(frac(h1*97.3)*6-3), ly=Yv(sf(i))+2.5+frac(h1*53.7)*4;
+    ctx.fillStyle="#b9c897";
+    ctx.beginPath();ctx.arc(lx,ly,2.1,0,7);ctx.fill();
+    ctx.strokeStyle="rgba(96,116,76,0.6)";ctx.lineWidth=0.8;ctx.stroke();
+  }
+  // pluja (l'agent que renta el sòl nu) — més intensa com més alta la intensitat
+  if(phase==="running"&&!reduceMotion){
+    const nRain=Math.round(rainP.length*(0.3+0.7*Math.min(1,S.int/1.5)));
+    const vRain=6+5*S.int;
+    ctx.strokeStyle="rgba(110,155,180,0.45)";ctx.lineWidth=1;
+    for(let k=0;k<nRain;k++){
+      const p=rainP[k];
+      p.y+=vRain;p.x-=1.1;
+      if(p.y>Yv(sfAtX(p.x))||p.x<0){p.y=-6;p.x=Math.random()*W;}
+      ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x+2.2,p.y-9);ctx.stroke();
+    }
+  }
+}
+
+/* ---------------- etiquetes de formes del relleu ---------------- */
+function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function argmaxF(fn,from,to){let mi=from,mv=-1e9;for(let i=from;i<to;i++){const v=fn(i);if(v>mv){mv=v;mi=i;}}return{i:mi,v:mv};}
+function labelCandidates(){
+  const c=[];
+  if(S.tick<25)return c;
+  if(current==="riu"){
+    const inc=argmaxF(i=>sf0(i)-sf(i),4,Math.floor(N*0.6));
+    if(inc.v>10)c.push({i:inc.i,t:"Vall en V (curs alt)",pr:1});
+    let delta=-1;
+    for(let i=N-1;i>=0;i--){if(sf0(i)<S.WL-0.5&&S.sed[i]>3){delta=i;break;}}
+    if(delta>0)c.push({i:delta,t:"Delta",pr:1});
+    const all=argmaxF(i=>(sf(i)>S.WL+1&&i<N*0.62)?S.sed[i]:-1,4,Math.floor(N*0.62));
+    if(all.v>2.5)c.push({i:all.i,t:"Plana al·luvial",pr:3});
+  }else if(current==="vent"){
+    const d=argmaxF(i=>S.sed[i],Math.floor(N*0.26),N-2);
+    if(d.v>sedInitMax+6)c.push({i:d.i,t:"Duna",pr:1});
+    const e=argmaxF(i=>S.bed0[i]-S.bed[i],2,Math.floor(N*0.24));
+    if(e.v>1.5)c.push({i:e.i,t:"Deflació",pr:2});
+  }else if(current==="glacera"){
+    if(S.carveDone>0.30)c.push({i:Math.floor(S.snout*0.55),t:"Vall en U",pr:1});
+    const m=argmaxF(i=>S.sed[i],S.snout,Math.min(N-1,S.snout+8));
+    if(m.v>5)c.push({i:m.i,t:"Morrena",pr:1});
+    if(S.carveDone>0.12)c.push({i:5,t:"Circ glacial",pr:2});
+  }else if(current==="mar"){
+    if(S.face>4)c.push({i:S.face,t:"Penya-segat",pr:1});
+    if(S.coast0-S.face>=5)c.push({i:Math.floor((S.face+S.coast0)/2),t:"Plataforma d'abrasió",pr:2});
+    const b=argmaxF(i=>S.sed[i],S.face+1,Math.min(N-1,S.coast0+26));
+    if(b.v>2.5)c.push({i:b.i,t:"Platja",pr:2});
+  }else{
+    let big=null;
+    for(const pl of S.plants)if(!big||pl.g>big.g)big=pl;
+    if(big&&big.g>0.45)c.push({i:big.i,t:"Meteorització biològica",pr:1});
+    const bare=argmaxF(i=>S.covered[i]?-1:(sf0(i)-sf(i)),2,N-2);
+    if(bare.v>6)c.push({i:bare.i,t:"Sòl nu: més erosió",pr:1});
+    const hum=argmaxF(i=>S.covered[i]?S.sed[i]:-1,2,N-2);
+    if(hum.v>2.5)c.push({i:hum.i,t:"Sòl (humus)",pr:3});
+  }
+  return c;
+}
+function drawCallout(x,ySurf,text,tier){
+  const insetOn=(current==="riu"||current==="glacera");
+  if(insetOn)x=Math.min(x,W-212);
+  x=clamp(x,54,W-58);
+  let ty=tier%2===0?ySurf-48:ySurf-76;
+  ty=clamp(ty,10,H-40);
+  ctx.font="600 12.5px system-ui,-apple-system,'Segoe UI',sans-serif";
+  const tw=ctx.measureText(text).width+16;
+  ctx.strokeStyle="rgba(27,39,51,0.85)";ctx.lineWidth=1.2;
+  ctx.beginPath();ctx.moveTo(x,ySurf-3);ctx.lineTo(x,ty+21);ctx.stroke();
+  ctx.fillStyle="rgba(27,39,51,0.85)";
+  ctx.beginPath();ctx.arc(x,ySurf-3,3,0,7);ctx.fill();
+  const bx=clamp(x-tw/2,4,W-tw-4);
+  ctx.fillStyle="rgba(255,255,255,0.95)";
+  roundRect(bx,ty,tw,21,5);ctx.fill();
+  ctx.strokeStyle="#1b2733";ctx.lineWidth=1.1;ctx.stroke();
+  ctx.fillStyle="#1b2733";ctx.textAlign="left";ctx.textBaseline="middle";
+  ctx.fillText(text,bx+8,ty+11);
+  ctx.textAlign="start";ctx.textBaseline="alphabetic";
+}
+let labelPos={};   // text -> {x,y} suavitzat
+function drawLabels(){
+  const cands=labelCandidates().sort((a,b)=>a.pr-b.pr);
+  const placed=[];
+  const active={};
+  for(const c of cands){
+    if(placed.length>=3)break;
+    const tx=X(c.i), ty=Yv(sf(c.i));
+    let ok=true;
+    for(const px of placed)if(Math.abs(px-tx)<102){ok=false;break;}
+    if(!ok)continue;
+    // suavitza la posició (ease) perquè l'etiqueta no salti cada fotograma
+    if(!labelPos[c.t])labelPos[c.t]={x:tx,y:ty};
+    const lp=labelPos[c.t];
+    lp.x+=(tx-lp.x)*0.08;
+    lp.y+=(ty-lp.y)*0.12;
+    active[c.t]=1;
+    drawCallout(lp.x,lp.y,c.t,placed.length);
+    placed.push(lp.x);
+  }
+  // oblida les etiquetes que ja no surten
+  for(const k in labelPos)if(!active[k])delete labelPos[k];
+}
+
+/* ---------------- requadre: tall transversal V/U ---------------- */
+function drawInset(){
+  if(current!=="riu"&&current!=="glacera")return;
+  const w=178,h=118,x0=W-w-12,y0=12;
+  ctx.fillStyle="rgba(255,255,255,0.93)";
+  roundRect(x0,y0,w,h,8);ctx.fill();
+  ctx.strokeStyle="#1b2733";ctx.lineWidth=1.2;ctx.stroke();
+  ctx.font="700 9px ui-monospace,Menlo,Consolas,monospace";
+  ctx.fillStyle="#5a6b79";ctx.textAlign="center";
+  ctx.fillText("TALL TRANSVERSAL DE LA VALL",x0+w/2,y0+16);
+  const cx=x0+w/2, gy=y0+38, bottom=y0+h-22;
+  ctx.fillStyle="#a8763e";ctx.fillRect(x0+8,gy,w-16,bottom-gy);
+  ctx.strokeStyle="rgba(40,25,10,0.18)";ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(x0+8,gy+(bottom-gy)*0.55);ctx.lineTo(x0+w-8,gy+(bottom-gy)*0.55);ctx.stroke();
+  let depth,hw,expo,labelTxt,ice=false;
+  if(current==="riu"){
+    depth=clamp(S.maxIncision*0.45,4,52);
+    hw=10+depth*0.45;expo=1.05;labelTxt="VALL EN V";
+  }else{
+    const p=S.carveDone;
+    depth=lerp(14,50,Math.min(1,p*1.2+0.15));
+    hw=lerp(13,55,p);expo=lerp(1.05,4,p);
+    labelTxt=p<0.5?"VALL EN V → U":"VALL EN U";ice=true;
+  }
+  depth=Math.min(depth,bottom-gy-4);
+  hw=Math.min(hw,(w-26)/2);
+  function carvePath(){
+    ctx.beginPath();ctx.moveTo(cx-hw,gy);
+    for(let u=-1;u<=1.0001;u+=0.08){
+      ctx.lineTo(cx+u*hw,gy+depth*(1-Math.pow(Math.abs(u),expo)));
+    }
+    ctx.lineTo(cx+hw,gy);ctx.closePath();
+  }
+  carvePath();ctx.fillStyle="#f1f6f8";ctx.fill();
+  if(ice){
+    ctx.save();carvePath();ctx.clip();
+    ctx.fillStyle="rgba(207,232,242,0.92)";
+    ctx.fillRect(x0,gy+3,w,depth);
+    ctx.strokeStyle="rgba(140,185,210,0.8)";ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(cx-hw,gy+depth*0.45);
+    ctx.quadraticCurveTo(cx,gy+depth*0.7,cx+hw,gy+depth*0.45);ctx.stroke();
+    ctx.restore();
+  }else{
+    ctx.fillStyle="rgba(58,143,191,0.85)";
+    ctx.beginPath();
+    ctx.moveTo(cx-4,gy+depth-5);ctx.lineTo(cx+4,gy+depth-5);
+    ctx.lineTo(cx+1.5,gy+depth-0.5);ctx.lineTo(cx-1.5,gy+depth-0.5);
+    ctx.closePath();ctx.fill();
+  }
+  carvePath();ctx.strokeStyle="#54381f";ctx.lineWidth=1.5;ctx.stroke();
+  ctx.strokeStyle="#54381f";ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(x0+8,gy);ctx.lineTo(cx-hw,gy);
+  ctx.moveTo(cx+hw,gy);ctx.lineTo(x0+w-8,gy);ctx.stroke();
+  ctx.font="700 11.5px system-ui,sans-serif";ctx.fillStyle="#1b2733";
+  ctx.fillText(labelTxt,cx,y0+h-8);
+  ctx.textAlign="start";
+}
+
+/* ---------------- render estàtic per a la comparació ----------------
+   Dibuixa l'escena (sense partícules animades) al context indicat. Si
+   useInitial=true, mostra el perfil inicial intercanviant temporalment
+   els vectors bed/sed pels seus equivalents bed0/sed0.                  */
+function drawSceneStatic(targetCtx,useInitial,exag){
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  const tc=targetCtx.canvas;
+  if(tc.width!==Math.round(W*dpr)){tc.width=Math.round(W*dpr);tc.height=Math.round(H*dpr);}
+  targetCtx.setTransform(dpr,0,0,dpr,0,0);
+  // intercanvi temporal d'estat
+  let sbed,ssed,ssnout,sface,scarve,smaxinc,splants,scover,sbed0,ssed0;
+  let restoreExag=null;
+  if(useInitial){
+    sbed=S.bed;ssed=S.sed;ssnout=S.snout;sface=S.face;scarve=S.carveDone;
+    smaxinc=S.maxIncision;splants=S.plants;scover=S.covered;
+    S.bed=S.bed0;S.sed=S.sed0;
+    S.snout=Math.floor((0.22+0.42*S.int)*N);S.face=initialFace();S.carveDone=0;
+    S.maxIncision=0;S.plants=[];S.covered=new Uint8Array(N);
+  }
+  // exageració vertical: amplifica la desviació respecte al perfil inicial
+  if(exag&&exag!==1){
+    const obed=Float32Array.from(S.bed), osed=Float32Array.from(S.sed);
+    const nb=Float32Array.from(S.bed), ns=Float32Array.from(S.sed);
+    for(let i=0;i<N;i++){
+      const base=S.bed0[i]+S.sed0[i];
+      const cur=S.bed[i]+S.sed[i];
+      const dev=cur-base;
+      const amp=base+dev*exag;            // amplifica la diferència
+      // reparteix l'alçada amplificada mantenint la proporció roca/sediment
+      const total=S.bed[i]+S.sed[i];
+      const sedFrac=total>0?S.sed[i]/total:0;
+      ns[i]=Math.max(0,(amp)*sedFrac);
+      nb[i]=Math.max(4,amp-ns[i]);
+    }
+    S.bed=nb;S.sed=ns;
+    restoreExag=()=>{S.bed=obed;S.sed=osed;};
+  }
+  const prev=ctx;ctx=targetCtx;
+  const wasParts=parts;parts=[];          // sense partícules a la fotografia
+  drawSky();
+  drawBedrock();
+  drawSediment();
+  drawSurfaceLine();
+  if(current==="riu")drawRiverRibbon();
+  drawWater();
+  if(current==="glacera"&&!useInitial)drawGlacier();
+  if(current==="bio")drawBioExtras();
+  drawVegTufts();
+  if(!useInitial)drawGhost();
+  if(!useInitial)drawLabels();
+  parts=wasParts;ctx=prev;
+  if(restoreExag)restoreExag();
+  if(useInitial){
+    S.bed=sbed;S.sed=ssed;S.snout=ssnout;S.face=sface;S.carveDone=scarve;
+    S.maxIncision=smaxinc;S.plants=splants;S.covered=scover;
+  }
+}
+function initialFace(){
+  if(S.WL<0)return -1;
+  for(let i=N-1;i>=0;i--){if(S.bed0[i]+S.sed0[i]>=S.WL+1.5)return i;}
+  return -1;
+}
+
+/* ---------------- indicador d'intensitat de l'agent ----------------
+   Insígnia a dalt a l'esquerra amb 1–3 fletxes que pulsen segons la
+   intensitat triada, perquè es vegi a cop d'ull com d'enèrgic és l'agent. */
+function drawIntensityBadge(){
+  if(phase!=="running")return;
+  const a=AGENTS[current];
+  const lvl=S.int<0.6?1:S.int<1.05?2:3;
+  const txt=lvl===1?"INTENSITAT BAIXA":lvl===2?"INTENSITAT MITJANA":"INTENSITAT ALTA";
+  const bx=12, by=H-30, padW=ctx.measureText?0:0;
+  ctx.font="700 11px ui-monospace,Menlo,Consolas,monospace";
+  const tw=ctx.measureText(txt).width;
+  const boxW=tw+54, boxH=22;
+  ctx.fillStyle="rgba(20,30,42,0.72)";
+  roundRect(bx,by,boxW,boxH,7);ctx.fill();
+  // fletxes del color de l'agent que pugen en nombre amb la intensitat
+  for(let f=0;f<3;f++){
+    const ax=bx+12+f*11, ay=by+boxH/2;
+    const on=f<lvl;
+    const puls=on?0.55+0.45*Math.abs(Math.sin(uiTick*0.12 - f*0.6)):0.18;
+    ctx.fillStyle = on ? "rgba("+hexToRgb(a.color)+","+puls+")"
+                       : "rgba(160,170,180,"+puls+")";
+    ctx.beginPath();
+    ctx.moveTo(ax-4,ay+4);ctx.lineTo(ax,ay-4);ctx.lineTo(ax+4,ay+4);ctx.closePath();ctx.fill();
+  }
+  ctx.fillStyle="#dfe6ec";ctx.textAlign="left";ctx.textBaseline="middle";
+  ctx.fillText(txt,bx+44,by+boxH/2+0.5);
+  ctx.textAlign="start";ctx.textBaseline="alphabetic";
+}
+function hexToRgb(h){
+  const n=parseInt(h.slice(1),16);
+  return ((n>>16)&255)+","+((n>>8)&255)+","+(n&255);
+}
+/* fletxa de direcció del vent, amb mida i ritme segons la intensitat */
+function drawWindArrow(){
+  if(current!=="vent"||phase!=="running"||reduceMotion)return;
+  const y=42, len=30+40*S.int, x=W/2-len/2 + Math.sin(uiTick*0.05)*4;
+  ctx.strokeStyle="rgba(150,110,50,0.8)";ctx.lineWidth=2+1.5*S.int;ctx.lineCap="round";
+  ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+len,y);
+  ctx.lineTo(x+len-9,y-6);ctx.moveTo(x+len,y);ctx.lineTo(x+len-9,y+6);ctx.stroke();
+  ctx.lineCap="butt";
+  ctx.font="700 10px ui-monospace,Menlo,Consolas,monospace";ctx.fillStyle="rgba(120,85,35,0.9)";
+  ctx.textAlign="center";ctx.fillText("VENT",x+len/2,y-11);ctx.textAlign="start";
+}
+
+/* ---------------- composició ---------------- */
+function render(){
+  drawSky();
+  drawBedrock();
+  drawSediment();
+  drawSurfaceLine();
+  if(current==="riu")drawRiverRibbon();
+  drawWater();
+  if(current==="glacera")drawGlacier();
+  if(current==="vent")drawWindExtras();
+  if(current==="mar")drawSeaExtras();
+  if(current==="bio")drawBioExtras();
+  drawVegTufts();
+  drawGhost();
+  drawParts();
+  drawWindArrow();
+  drawIntensityBadge();
+  drawLabels();
+  drawInset();
+}
+function fmtVol(v){
+  return Math.round(v*3).toString().replace(/\B(?=(\d{3})+(?!\d))/g,".")+" m³";
+}
+function setCounters(){
+  document.getElementById("cE").textContent=fmtVol(S.erodedTotal);
+  document.getElementById("cD").textContent=fmtVol(S.depositedTotal);
+}
+
+/* ---------------- llegendes narratives durant la simulació ----------------
+   Cada agent té una seqüència de missatges que apareixen a mesura que avança
+   l'experiment (fracció 0→1 del recorregut), per il·lustrar cada procés.    */
+const CAPTIONS={
+  riu:[[0,"L'aigua de pluja baixa pel pendent i comença a desgastar la roca…"],
+       [.22,"Al curs alt, el corrent excava amb força i obre una vall en V."],
+       [.5,"Riu avall perd velocitat: diposita materials a la plana al·luvial."],
+       [.74,"En arribar a l'aigua, els sediments s'acumulen i formen un delta."]],
+  vent:[[0,"El vent bufa sobre l'altiplà i arrenca les partícules soltes (deflació)…"],
+        [.28,"La sorra viatja a saltets i s'acumula a sotavent."],
+        [.58,"Es forma una duna: vessant suau de cara al vent, abrupte al darrere."],
+        [.8,"La duna avança lentament en la direcció del vent."]],
+  glacera:[[0,"La neu acumulada s'ha compactat en gel, que comença a lliscar…"],
+           [.26,"El gel arrenca roca del fons i dels costats de la vall."],
+           [.56,"La vall s'eixampla i s'aplana: la V es transforma en U."],
+           [.8,"Al front, el gel es fon i deixa els materials: la morrena."]],
+  mar:[[0,"Les onades arriben a la costa i piquen contra la roca…"],
+       [.3,"Cada cop arrenca fragments de la base del penya-segat."],
+       [.58,"El penya-segat retrocedeix i queda una plataforma d'abrasió."],
+       [.8,"Part del material arrencat s'acumula i forma una platja."]],
+  bio:[[0,"Comença a ploure sobre el vessant…"],
+       [.26,"On el sòl és nu, la pluja se l'emporta pendent avall."],
+       [.54,"Les arrels de les plantes subjecten el sòl i el protegeixen."],
+       [.78,"Les arrels fracturen la roca i, a sota la vegetació, es forma sòl."]]
+};
+function showCaption(txt){
+  const c=document.getElementById("caption");
+  c.style.opacity=0;
+  setTimeout(()=>{c.textContent=txt;c.style.opacity=1;},120);
+}
+function resetCaptions(){captionQueue=(CAPTIONS[current]||[]).slice();captionIdx=0;}
+function pumpCaptions(fr){
+  while(captionIdx<captionQueue.length && fr>=captionQueue[captionIdx][0]){
+    showCaption(captionQueue[captionIdx][1]);captionIdx++;
+  }
+}
+
+/* ---------------- bucle principal per fases ---------------- */
+function frame(){
+  uiTick++;
+  if(phase==="running"){
+    // pas efectiu modulat per la velocitat triada (0.5× / 1× / 2×)
+    let eff=stepsPerFrame*speedMul;
+    let whole=Math.floor(eff);
+    if(Math.random()<(eff-whole))whole++;          // fracció → mitjana correcta
+    for(let k=0;k<whole && runTicks<RUN_LEN;k++){SIM.step();runTicks++;}
+    const fr=runTicks/RUN_LEN;
+    pumpCaptions(fr);
+    document.getElementById("runFill").style.width=(fr*100)+"%";
+    document.getElementById("clock").textContent=Math.round(fr*YEARS).toLocaleString("ca")+" anys";
+    if(uiTick%6===0)setCounters();
+    if(runTicks>=RUN_LEN)finishRun();
+  }
+  drainEvents();
+  render();
+  requestAnimationFrame(frame);
+}
+
+/* ---------------- transicions de fase ---------------- */
+function setPhase(p){
+  phase=p;
+  document.getElementById("st1").classList.toggle("on",p==="setup");
+  document.getElementById("st2").classList.toggle("on",p==="running");
+  document.getElementById("st3").classList.toggle("on",p==="done");
+}
+function captureSnapshot(){
+  return {bed:Float32Array.from(S.bed),sed:Float32Array.from(S.sed),
+          bed0:Float32Array.from(S.bed0),sed0:Float32Array.from(S.sed0),
+          WL:S.WL,snout:S.snout,face:S.face,coast0:S.coast0,carveDone:S.carveDone,
+          maxIncision:S.maxIncision,plants:JSON.parse(JSON.stringify(S.plants)),
+          covered:Uint8Array.from(S.covered),
+          erodedTotal:S.erodedTotal,depositedTotal:S.depositedTotal,tick:S.tick};
+}
+
+function startRun(){
+  setPhase("running");
+  runTicks=0;resetCaptions();
+  document.getElementById("play").textContent="⏸ Pausa";
+  document.getElementById("compare").classList.remove("show");
+  // bloqueja els paràmetres mentre corre l'experiment
+  ["s-int","s-hard","s-veg"].forEach(id=>document.getElementById(id).disabled=true);
+  document.querySelectorAll(".agent").forEach(a=>a.disabled=true);
+}
+function pauseRun(){setPhase("setup");document.getElementById("play").textContent="▶ Continua";}
+function finishRun(){
+  setPhase("done");
+  setCounters();
+  document.getElementById("play").textContent="✓ Experiment acabat";
+  document.getElementById("clock").textContent=YEARS.toLocaleString("ca")+" anys";
+  ["s-int","s-hard","s-veg"].forEach(id=>document.getElementById(id).disabled=(id==="s-veg"&&!AGENTS[current].vegOn));
+  if(!challengeMode)document.querySelectorAll(".agent").forEach(a=>a.disabled=false);
+  if(challengeMode){ onChallengeRunDone(); return; }
+  showCaption("Experiment acabat: compara el resultat a sota. 👇");
+  buildComparison();
+  document.getElementById("compare").classList.add("show");
+  document.getElementById("compare").scrollIntoView({behavior:reduceMotion?"auto":"smooth",block:"start"});
+}
+/* mètrica numèrica del resultat segons l'agent (per comparar A vs B) */
+function measureOutcome(){
+  if(current==="riu"){
+    return {val:Math.round(S.maxIncision*0.9), unit:"m", what:"fondària de la vall en V"};
+  }else if(current==="vent"){
+    let m=0;for(let i=Math.floor(N*0.26);i<N;i++)m=Math.max(m,S.sed[i]);
+    return {val:Math.round(m*0.9), unit:"m", what:"alçada de la duna"};
+  }else if(current==="glacera"){
+    return {val:Math.round(S.carveDone*100), unit:"%", what:"transformació cap a vall en U"};
+  }else if(current==="mar"){
+    return {val:Math.round((S.coast0-S.face)*SIM.dx*0.9), unit:"m", what:"retrocés del penya-segat"};
+  }else{
+    // erosió neta del sòl nu (com més vegetació, menys)
+    let eb=0,nb=0;for(let i=0;i<N;i++){if(!S.covered[i]){eb+=(S.bed0[i]+S.sed0[i])-(S.bed[i]+S.sed[i]);nb++;}}
+    return {val:Math.round(eb/Math.max(1,nb)*3), unit:"m", what:"erosió del sòl"};
+  }
+}
+
+/* ---------------- comparació abans/després ---------------- */
+const cvBefore=document.getElementById("cvBefore"), ctxB=cvBefore.getContext("2d");
+const cvAfter=document.getElementById("cvAfter"),  ctxA=cvAfter.getContext("2d");
+function buildComparison(){
+  const a=AGENTS[current];
+  document.getElementById("cmpYears").textContent=YEARS.toLocaleString("ca")+" anys";
+  document.getElementById("cmpTitle").textContent=a.name;
+  drawSceneStatic(ctxB,true);    // abans (perfil inicial)
+  drawSceneStatic(ctxA,false);   // després (estat actual)
+  buildExplain();
+  setDivider(0.5);
+}
+function setDivider(t){
+  t=Math.max(0,Math.min(1,t));
+  document.getElementById("cmpAfter").style.width=(t*100)+"%";
+  document.getElementById("cmpDiv").style.left=(t*100)+"%";
+  document.getElementById("cmpKnob").style.left=(t*100)+"%";
+}
+(function initSlider(){
+  const shell=document.getElementById("cmpShell");let drag=false;
+  const at=e=>{const r=shell.getBoundingClientRect();const cx=(e.touches?e.touches[0].clientX:e.clientX);setDivider((cx-r.left)/r.width);};
+  shell.addEventListener("mousedown",e=>{drag=true;at(e);});
+  window.addEventListener("mousemove",e=>{if(drag)at(e);});
+  window.addEventListener("mouseup",()=>drag=false);
+  shell.addEventListener("touchstart",e=>{drag=true;at(e);},{passive:true});
+  shell.addEventListener("touchmove",e=>{if(drag)at(e);},{passive:true});
+  shell.addEventListener("touchend",()=>drag=false);
+})();
+
+/* explicació generada amb les xifres reals de l'experiment */
+function buildExplain(){
+  const erod=S.erodedTotal, dep=S.depositedTotal;
+  const a=AGENTS[current];
+  let forma="", proces="";
+  if(current==="riu"){
+    const v=Math.round(S.maxIncision*0.9);
+    forma="una <b>vall en V</b> de fins a "+v+" m de fondària al curs alt i un <b>delta</b> a la desembocadura";
+    proces="L'aigua ha erosionat amb força a dalt i ha dipositat els materials a baix, on perd velocitat.";
+  }else if(current==="vent"){
+    let m=0;for(let i=Math.floor(N*0.26);i<N;i++)m=Math.max(m,S.sed[i]);
+    forma="una <b>duna</b> d'uns "+Math.round(m*0.9)+" m d'alçada i una zona de <b>deflació</b> on s'ha arrencat la sorra";
+    proces="El vent ha transportat les partícules des de l'altiplà i les ha acumulat a sotavent.";
+  }else if(current==="glacera"){
+    forma="una <b>vall en U</b> (transformada en un "+Math.round(S.carveDone*100)+"% des de la forma inicial) i una <b>morrena</b> al front";
+    proces="El gel ha excavat el fons i els costats de la vall i ha abandonat els materials en fondre's.";
+  }else if(current==="mar"){
+    const ret=Math.round((S.coast0-S.face)*SIM.dx*0.9);
+    forma="un <b>penya-segat</b> que ha retrocedit uns "+ret+" m, una <b>plataforma d'abrasió</b> i una <b>platja</b>";
+    proces="Les onades han desgastat la base de la roca fins a fer caure la paret, una vegada i una altra.";
+  }else{
+    forma="<b>sòl</b> sota la vegetació i zones de roca erosionada on el terreny estava nu";
+    proces="La pluja ha rentat el sòl despullat, mentre les arrels protegien el terreny i fracturaven la roca.";
+  }
+  // efecte dels paràmetres triats, en paraules
+  const pInt=S.int<0.55?"baixa":S.int>1.05?"alta":"mitjana";
+  const pHard=S.hard<0.35?"tova":S.hard>0.7?"dura":"intermèdia";
+  let pv="";
+  if(a.vegOn){const pVeg=S.veg<0.3?"escassa":S.veg>0.7?"abundant":"moderada";
+    pv=" i una cobertura vegetal <b>"+pVeg+"</b>";}
+  const html=
+    '<h4>Què ha passat</h4>'+
+    '<p>Amb una intensitat de l\'agent <b>'+pInt+'</b>, una roca <b>'+pHard+'</b>'+pv+
+    ', en '+YEARS.toLocaleString("ca")+' anys el paisatge ha desenvolupat '+forma+'. '+proces+'</p>'+
+    '<div class="nums">'+
+      '<div class="stat"><div class="k">Roca erosionada</div><div class="v">'+fmtVol(erod)+'</div></div>'+
+      '<div class="stat"><div class="k">Sediment dipositat</div><div class="v">'+fmtVol(dep)+'</div></div>'+
+      '<div class="stat"><div class="k">Temps simulat</div><div class="v">'+(YEARS/1000)+' mil·lennis</div></div>'+
+    '</div>'+
+    '<p style="font-size:13px;color:#5a6b79;margin-top:6px">Prova de canviar un paràmetre i torna a engegar: compara com varia el resultat.</p>';
+  document.getElementById("explain").innerHTML=html;
+}
+
+/* ---------------- UI: agents, controls ---------------- */
+function resetTerrain(){
+  SIM.initScene(current);
+  parts=[];initAmbient();
+  runTicks=0;
+  sedInitMax=0;
+  for(let i=0;i<N;i++)if(S.sed0[i]>sedInitMax)sedInitMax=S.sed0[i];
+  document.getElementById("cE").textContent="0 m³";
+  document.getElementById("cD").textContent="0 m³";
+  document.getElementById("runFill").style.width="0%";
+  document.getElementById("clock").textContent="0 anys";
+  showCaption("Ajusta els paràmetres i prem «Engega l'experiment».");
+}
+const agentsBox=document.getElementById("agents");
+Object.keys(AGENTS).forEach(key=>{
+  const a=AGENTS[key];
+  const b=document.createElement("button");
+  b.className="agent";b.style.setProperty("--ag",a.color);
+  b.setAttribute("aria-pressed",key==="riu"?"true":"false");
+  b.innerHTML='<span class="ic">'+a.icon+'</span><span><span class="nm">'+a.short+'</span><span class="sub">'+a.sub+'</span></span>';
+  const _key=key;
+  b.onclick=()=>{ if(challengeMode)return; selectAgent(_key); };
+  agentsBox.appendChild(b);
+});
+function applyAgentVisuals(key){
+  current=key;
+  const keys=Object.keys(AGENTS);
+  document.querySelectorAll(".agent").forEach((el,idx)=>{
+    el.setAttribute("aria-pressed",keys[idx]===key?"true":"false");
+  });
+  const a=AGENTS[key];
+  document.getElementById("agentTag").textContent=a.tag;
+  document.getElementById("hint-t").textContent=a.name;
+  document.getElementById("hint-p").textContent=a.hint;
+  const fbox=document.getElementById("hint-forms");fbox.innerHTML="";
+  a.forms.forEach(f=>{const s=document.createElement("span");s.className="tagform";s.textContent=f;fbox.appendChild(s);});
+  document.querySelectorAll(".chip").forEach(c=>{c.classList.toggle("on",!!a.proc[c.dataset.p]);});
+  document.getElementById("sedSw").style.background=a.sedColor;
+  const vegW=document.getElementById("sld-veg");
+  vegW.classList.toggle("off",!a.vegOn);
+  document.getElementById("s-veg").disabled=!a.vegOn;
+}
+function selectAgent(key){
+  applyAgentVisuals(key);
+  document.getElementById("compare").classList.remove("show");
+  setPhase("setup");
+  document.getElementById("play").textContent="▶ Engega l'experiment";
+  resetTerrain();
+}
+function bindSlider(id,valId,apply,fmt){
+  const s=document.getElementById(id),v=document.getElementById(valId);
+  s.addEventListener("input",()=>{apply(parseFloat(s.value));v.textContent=fmt?fmt(s.value):s.value;});
+}
+bindSlider("s-int","v-int",x=>S.int=x);
+bindSlider("s-hard","v-hard",x=>S.hard=x);
+bindSlider("s-veg","v-veg",x=>S.veg=x);
+bindSlider("s-spd","v-spd",x=>{speedMul=[0.5,1,2][x];},x=>([ "0,5×","1×","2×" ][x]));
+
+document.getElementById("play").addEventListener("click",()=>{
+  if(phase==="setup"){
+    if(runTicks===0){resetTerrain();SIM.initScene(current);
+      }
+    startRun();
+    if(challengeMode)document.getElementById("play").textContent="⏸ Pausa";
+  }
+  else if(phase==="running")pauseRun();
+  else { // 'done'
+    if(challengeMode){ refreshChallengeStep(); }  // repeteix l'experiment actual
+    else { resetTerrain();startRun(); }
+  }
+});
+document.getElementById("reset").addEventListener("click",()=>{
+  setPhase("setup");
+  document.getElementById("compare").classList.remove("show");
+  if(challengeMode){ refreshChallengeStep(); }
+  else { document.getElementById("play").textContent="▶ Engega l'experiment"; resetTerrain(); }
+});
+document.getElementById("rerun").addEventListener("click",()=>{resetTerrain();startRun();});
+document.getElementById("tweak").addEventListener("click",()=>{
+  setPhase("setup");
+  document.getElementById("play").textContent="▶ Engega l'experiment";
+  document.getElementById("compare").classList.remove("show");
+  resetTerrain();
+  document.getElementById("stage").scrollIntoView({behavior:reduceMotion?"auto":"smooth",block:"start"});
+});
+
+/* =========================================================
+   MODE REPTE — experiments aparellats A/B (variable controlada)
+   Cada repte fixa l'agent i el paràmetre a estudiar, bloqueja la
+   resta, i demana DUES simulacions amb valors diferents d'aquell
+   paràmetre. Després mostra els dos resultats de costat.
+   ========================================================= */
+let challengeMode=false;
+let chIndex=0;        // repte actual
+let chSlot="A";       // experiment A o B
+let chData={};        // {idx: {A:{params,outcome,snap}, B:{...}, predicted, answered}}
+const CH_KEY="modelat_relleu_reptes_v1";
+
+/* desa el progrés dels reptes (sense els canvas, que no es poden serialitzar) */
+function saveChallengeProgress(){
+  const slim={idx:chIndex, data:{}};
+  for(const k in chData){
+    const d=chData[k];
+    const lite=(rec)=>rec?{params:rec.params,outcome:rec.outcome,eroded:rec.eroded,deposited:rec.deposited}:null;
+    slim.data[k]={A:lite(d.A),B:lite(d.B),predicted:d.predicted,answered:!!d.answered};
+  }
+  store.set(CH_KEY,JSON.stringify(slim));
+}
+/* recupera el progrés dels reptes desat en una sessió anterior */
+function loadChallengeProgress(){
+  const raw=store.get(CH_KEY);
+  if(!raw)return;
+  try{
+    const slim=JSON.parse(raw);
+    if(slim&&slim.data){
+      chData={};
+      for(const k in slim.data){
+        const d=slim.data[k];
+        // marquem els canvas com a pendents de reconstruir (snap=null)
+        chData[k]={A:d.A?Object.assign({},d.A,{snap:null}):null,
+                   B:d.B?Object.assign({},d.B,{snap:null}):null,
+                   predicted:(d.predicted===undefined?null:d.predicted),
+                   answered:!!d.answered};
+      }
+      if(typeof slim.idx==="number")chIndex=clamp(slim.idx,0,CHALLENGES.length-1);
+    }
+  }catch(e){}
+}
+
+const CHALLENGES=[
+  { agent:"riu", param:"hard",
+    q:"Com afecta la DURESA DE LA ROCA l'erosió d'un riu?",
+    task:"Fes l'<b>experiment A</b> amb roca <b>tova</b> i l'<b>experiment B</b> amb roca <b>dura</b>. Deixa la intensitat i la vegetació igual.",
+    A:{hard:0.1}, B:{hard:0.9}, lock:{int:0.9,veg:0.3},
+    predict:"Quina creus que farà una vall MÉS FONDA?",
+    popts:["Roca tova (A)","Roca dura (B)","Igual"], pcorrect:0,
+    bigger:"A",  // quin experiment dóna més valor de la mètrica
+    conclude:"Com més <b>tova</b> és la roca, més fàcil li resulta a l'aigua excavar-la: la vall en V queda més fonda. La roca dura resisteix l'erosió.",
+    check:"Per què el riu excava més la roca tova?",
+    copts:["Perquè la roca tova oposa menys resistència a l'erosió","Perquè la roca dura té més aigua","Perquè el riu va més ràpid sobre roca dura"], ccorrect:0 },
+
+  { agent:"riu", param:"int",
+    q:"Com afecta la INTENSITAT del riu (cabal i pendent) a l'erosió?",
+    task:"Fes l'<b>experiment A</b> amb intensitat <b>baixa</b> i el <b>B</b> amb intensitat <b>alta</b>. No toquis la resta.",
+    A:{int:0.3}, B:{int:1.5}, lock:{hard:0.4,veg:0.3},
+    predict:"Quina excavarà una vall més fonda?",
+    popts:["Intensitat baixa (A)","Intensitat alta (B)","Igual"], pcorrect:1,
+    bigger:"B",
+    conclude:"Com més <b>intens</b> és l'agent (més aigua i més pendent), més energia té per arrencar i transportar roca: l'erosió és molt més gran.",
+    check:"Un riu de muntanya amb molt pendent, comparat amb un de plana…",
+    copts:["Erosiona molt més","Erosiona molt menys","Erosiona igual"], ccorrect:0 },
+
+  { agent:"vent", param:"veg",
+    q:"Com afecta la COBERTURA VEGETAL a l'acció del vent?",
+    task:"Fes l'<b>experiment A</b> amb vegetació <b>escassa</b> i el <b>B</b> amb vegetació <b>abundant</b>. Mantén la intensitat igual.",
+    A:{veg:0.05}, B:{veg:0.95}, lock:{int:1.1,hard:0.4},
+    predict:"On creixerà una duna més grossa?",
+    popts:["Vegetació escassa (A)","Vegetació abundant (B)","Igual"], pcorrect:0,
+    bigger:"A",
+    conclude:"Les plantes <b>subjecten la sorra</b> amb les arrels i frenen el vent. Amb molta vegetació gairebé no es mou sorra; amb el terra nu, el vent forma dunes grosses.",
+    check:"Per què es planten arbres a les zones de dunes?",
+    copts:["Per fixar la sorra i evitar que el vent l'arrossegui","Perquè els arbres fan més vent","Per fer la sorra més fina"], ccorrect:0 },
+
+  { agent:"glacera", param:"int",
+    q:"Com afecta la INTENSITAT d'una glacera a l'excavació de la vall?",
+    task:"Fes l'<b>experiment A</b> amb intensitat <b>baixa</b> i el <b>B</b> amb intensitat <b>alta</b>. Deixa igual la duresa.",
+    A:{int:0.3}, B:{int:1.5}, lock:{hard:0.4},
+    predict:"Quina transformarà més la vall cap a forma d'U?",
+    popts:["Intensitat baixa (A)","Intensitat alta (B)","Igual"], pcorrect:1,
+    bigger:"B",
+    conclude:"Una glacera més <b>gran i activa</b> llisca amb més força i excava molt més el fons i els costats: la vall en U es forma més de pressa i més marcada.",
+    check:"Les glaceres més grans dels Pirineus, en el passat…",
+    copts:["Van excavar valls en U més amples i fondes","No van modificar el relleu","Només van fer dunes"], ccorrect:0 },
+
+  { agent:"mar", param:"hard",
+    q:"Com afecta la DURESA DE LA ROCA al retrocés d'un penya-segat?",
+    task:"Fes l'<b>experiment A</b> amb roca <b>tova</b> i el <b>B</b> amb roca <b>dura</b>. Mantén la intensitat de les onades igual.",
+    A:{hard:0.1}, B:{hard:0.9}, lock:{int:1.0},
+    predict:"Quin penya-segat retrocedirà més?",
+    popts:["Roca tova (A)","Roca dura (B)","Igual"], pcorrect:0,
+    bigger:"A",
+    conclude:"Les onades desgasten més de pressa la roca <b>tova</b>: el penya-segat retrocedeix molt. Els penya-segats de roca dura resisteixen molt més.",
+    check:"Per què hi ha cales de roca dura que aguanten segles gairebé igual?",
+    copts:["Perquè la roca dura resisteix molt l'erosió de les onades","Perquè no hi toquen mai les onades","Perquè la roca dura creix"], ccorrect:0 }
+];
+
+const chParamMeta={
+  int:{slider:"s-int", name:"intensitat de l'agent"},
+  hard:{slider:"s-hard", name:"duresa de la roca"},
+  veg:{slider:"s-veg", name:"cobertura vegetal"}
+};
+
+/* ---------------- SISTEMA DE PESTANYES ---------------- */
+let currentTab="explora";
+let challengesDone=0;   // nombre de reptes completats (per desbloquejar el qüestionari)
+
+function challengesCompletedCount(){
+  let n=0;
+  for(let i=0;i<CHALLENGES.length;i++){
+    if(chData[i]&&chData[i].A&&chData[i].B&&chData[i].answered)n++;
+  }
+  return n;
+}
+function quizUnlocked(){ return challengesCompletedCount()>=CHALLENGES.length; }
+
+function moveStageTo(slotId){
+  const stage=document.getElementById("stage");
+  const slot=document.getElementById(slotId);
+  if(stage&&slot&&stage.parentNode!==slot)slot.appendChild(stage);
+}
+function moveParamsTo(slotId){
+  const params=document.getElementById("params");
+  const slot=document.getElementById(slotId);
+  if(params&&slot&&params.parentNode!==slot)slot.appendChild(params);
+}
+
+function switchTab(name){
+  // atura qualsevol simulació en marxa abans de canviar de pestanya
+  if(phase==="running"){ pauseRun(); }
+  currentTab=name;
+  // botons
+  document.getElementById("tab-explora").setAttribute("aria-pressed",name==="explora");
+  document.getElementById("tab-repte").setAttribute("aria-pressed",name==="repte");
+  document.getElementById("tab-quiz").setAttribute("aria-pressed",name==="quiz");
+  // vistes
+  document.getElementById("view-explora").style.display=name==="explora"?"":"none";
+  document.getElementById("view-repte").style.display=name==="repte"?"":"none";
+  document.getElementById("view-quiz").style.display=name==="quiz"?"":"none";
+
+  if(name==="explora"){
+    challengeMode=false;
+    moveParamsTo("slotParamsExplora");
+    moveStageTo("slotStageExplora");
+    document.querySelectorAll(".agent").forEach(a=>a.disabled=false);
+    ["s-int","s-hard","s-veg"].forEach(id=>{const el=document.getElementById(id);el.disabled=(id==="s-veg"&&!AGENTS[current].vegOn);});
+    document.querySelectorAll(".sld").forEach(s=>{s.classList.remove("locked");});
+    document.getElementById("compare").classList.remove("show");
+    setPhase("setup");
+    document.getElementById("play").textContent="▶ Engega l'experiment";
+    resetTerrain();
+  }
+  else if(name==="repte"){
+    challengeMode=true;
+    moveStageTo("slotStageRepte");        // l'escenari va sota el bloc del repte
+    moveParamsTo("slotParamsRepte");      // els paràmetres just sota l'explicació
+    document.querySelectorAll(".agent").forEach(a=>a.disabled=true);
+    if(Object.keys(chData).length===0){ chData={}; loadChallenge(0); }
+    else { loadChallenge(chIndex); }
+  }
+  else if(name==="quiz"){
+    refreshQuizGate();
+  }
+  window.scrollTo({top:0,behavior:reduceMotion?"auto":"smooth"});
+}
+
+function refreshQuizGate(){
+  const done=challengesCompletedCount();
+  const unlocked=quizUnlocked();
+  document.getElementById("qlProgress").textContent="Reptes completats: "+done+" / "+CHALLENGES.length;
+  document.getElementById("quizLocked").style.display=unlocked?"none":"";
+  document.getElementById("quiz").style.display=unlocked?"":"none";
+  // indicador a la pestanya
+  const tab=document.getElementById("tab-quiz");
+  tab.classList.toggle("unlocked",unlocked);
+  tab.classList.toggle("locked",!unlocked);
+  document.getElementById("tabLock").textContent=unlocked?"✓":"🔒";
+  document.getElementById("tabQuizSub").textContent=unlocked?"Disponible — avalua el que has après":"Es desbloqueja en fer els reptes";
+}
+
+function setSliderValue(sid,val){
+  const el=document.getElementById(sid);
+  el.value=val;el.dispatchEvent(new Event("input"));
+}
+function lockParamsFor(ch,slot){
+  const meta=chParamMeta[ch.param];
+  const target=slot==="A"?ch.A:ch.B;
+  for(const k in ch.lock) setSliderValue(chParamMeta[k].slider, ch.lock[k]);
+  setSliderValue(meta.slider, target[ch.param]);
+  ["int","hard","veg"].forEach(k=>{
+    const el=document.getElementById(chParamMeta[k].slider);
+    const isStudied=(k===ch.param);
+    el.disabled=!isStudied;
+    el.closest(".sld").classList.toggle("locked",!isStudied);
+  });
+  if(!AGENTS[ch.agent].vegOn){
+    const v=document.getElementById("s-veg");v.disabled=true;v.closest(".sld").classList.add("locked");
+  }
+}
+
+function loadChallenge(idx){
+  chIndex=idx;chSlot="A";
+  const ch=CHALLENGES[idx];
+  if(!chData[idx])chData[idx]={A:null,B:null,predicted:null,answered:false};
+  current=ch.agent;
+  applyAgentVisuals(ch.agent);
+  document.getElementById("chresult").classList.remove("show");
+  document.getElementById("chBadge").textContent="Repte "+(idx+1)+" / "+CHALLENGES.length;
+  document.getElementById("chQ").textContent=ch.q;
+  refreshChallengeStep();
+  refreshChallengeDots();
+  document.getElementById("chPrev").disabled=(idx===0);
+  document.getElementById("chNext").disabled=(idx===CHALLENGES.length-1);
+}
+
+function refreshChallengeStep(){
+  const ch=CHALLENGES[chIndex], d=chData[chIndex];
+  const slot=chSlot;
+  document.getElementById("chStep").textContent="Experiment "+slot+(slot==="A"?" (primera prova)":" (segona prova)");
+  const meta=chParamMeta[ch.param];
+  const target=slot==="A"?ch.A:ch.B;
+  const valTxt=ch.param==="hard"?(target.hard<0.5?"tova":"dura")
+              :ch.param==="int"?(target.int<0.8?"baixa":"alta")
+              :(target.veg<0.5?"escassa":"abundant");
+  document.getElementById("chTask").innerHTML=
+    ch.task+'<br><br>Ara mateix: <b>experiment '+slot+'</b> → posa la <b>'+meta.name+'</b> en «<b>'+valTxt+'</b>» i prem Engega.';
+  // predicció (només a l'inici de l'experiment A)
+  const pred=document.getElementById("chPredict");
+  if(slot==="A" && d.predicted===null){
+    let opts=ch.popts.map((o,i)=>'<button class="pbtn" data-pi="'+i+'">'+o+'</button>').join("");
+    pred.innerHTML='<div class="pq">🔮 Abans de començar, fes la teva predicció: '+ch.predict+'</div><div class="popts">'+opts+'</div>';
+    pred.querySelectorAll(".pbtn").forEach(b=>b.addEventListener("click",()=>{
+      d.predicted=+b.dataset.pi;
+      pred.querySelectorAll(".pbtn").forEach(x=>x.classList.remove("sel"));
+      b.classList.add("sel");
+      saveChallengeProgress();
+    }));
+    pred.style.display="block";
+  }else{
+    pred.style.display="none";
+  }
+  // aplica i bloqueja els paràmetres
+  lockParamsFor(ch,slot);
+  setPhase("setup");
+  document.getElementById("play").textContent="▶ Engega experiment "+slot;
+  resetTerrain();
+}
+
+function onChallengeRunDone(){
+  const ch=CHALLENGES[chIndex], d=chData[chIndex];
+  const outcome=measureOutcome();
+  const rec={params:{int:S.int,hard:S.hard,veg:S.veg}, outcome:outcome,
+             eroded:S.erodedTotal, deposited:S.depositedTotal, snap:captureStaticSnap()};
+  d[chSlot]=rec;
+  saveChallengeProgress();
+  if(chSlot==="A"){
+    chSlot="B";
+    showCaption("Experiment A fet ✓ Ara fes l'experiment B amb l'altre valor.");
+    refreshChallengeStep();
+    document.getElementById("stage").scrollIntoView({behavior:reduceMotion?"auto":"smooth",block:"start"});
+  }else{
+    showChallengeResult();
+  }
+}
+
+/* reconstrueix el canvas d'un experiment desat (re-simulant amb els seus paràmetres) */
+function rebuildSnap(rec,ch){
+  if(!rec||rec.snap)return;            // ja el tenim
+  // re-simula l'escenari amb els paràmetres guardats
+  const savedInt=S.int,savedHard=S.hard,savedVeg=S.veg;
+  S.int=rec.params.int;S.hard=rec.params.hard;S.veg=rec.params.veg;
+  current=ch.agent;
+  SIM.initScene(ch.agent);
+  for(let t=0;t<RUN_LEN;t++)SIM.step();
+  rec.snap=captureStaticSnap();
+  // restaura
+  S.int=savedInt;S.hard=savedHard;S.veg=savedVeg;
+}
+
+/* captura un dibuix estàtic del resultat actual a un canvas fora de pantalla */
+function captureStaticSnap(){
+  const off=document.createElement("canvas");
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  off.width=Math.round(W*dpr);off.height=Math.round(H*dpr);
+  const octx=off.getContext("2d");
+  // el riu té diferències de perfil subtils: les exagerem perquè es vegin millor
+  const exag=(current==="riu")?1.8:(current==="bio")?1.6:1;
+  drawSceneStatic(octx,false,exag);
+  return off;
+}
+
+const cvA2=document.getElementById("cvA2"),ctxA2=cvA2.getContext("2d");
+const cvB2=document.getElementById("cvB2"),ctxB2=cvB2.getContext("2d");
+function blit(srcCanvas,dstCtx){
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  dstCtx.canvas.width=Math.round(W*dpr);dstCtx.canvas.height=Math.round(H*dpr);
+  dstCtx.setTransform(1,0,0,1,0,0);
+  dstCtx.drawImage(srcCanvas,0,0);
+}
+function showChallengeResult(){
+  const ch=CHALLENGES[chIndex], d=chData[chIndex];
+  const meta=chParamMeta[ch.param];
+  document.getElementById("chrTitle").textContent=ch.q;
+  // si venim d'una sessió desada, reconstruïm els canvas que falten
+  rebuildSnap(d.A,ch);rebuildSnap(d.B,ch);
+  // restaura l'escenari del repte actual (rebuildSnap pot haver-lo canviat)
+  applyAgentVisuals(ch.agent);
+  // pinta els dos resultats
+  blit(d.A.snap,ctxA2);blit(d.B.snap,ctxB2);
+  // valors del paràmetre en text
+  const fmtParam=(rec)=>{
+    const v=rec.params[ch.param];
+    if(ch.param==="hard")return v<0.5?"tova":"dura";
+    if(ch.param==="int")return v<0.8?"baixa":"alta";
+    return v<0.5?"escassa":"abundant";
+  };
+  document.getElementById("chrTagA").textContent="Experiment A · "+meta.name+": "+fmtParam(d.A);
+  document.getElementById("chrTagB").textContent="Experiment B · "+meta.name+": "+fmtParam(d.B);
+  document.getElementById("chrMetaA").innerHTML=
+    '<div class="row"><span>'+meta.name+'</span><b>'+fmtParam(d.A)+'</b></div>'+
+    '<div class="row"><span>Roca erosionada</span><b>'+fmtVol(d.A.eroded)+'</b></div>'+
+    '<div class="res">'+d.A.outcome.what+': <span style="color:#e2b13c">'+d.A.outcome.val+' '+d.A.outcome.unit+'</span></div>';
+  document.getElementById("chrMetaB").innerHTML=
+    '<div class="row"><span>'+meta.name+'</span><b>'+fmtParam(d.B)+'</b></div>'+
+    '<div class="row"><span>Roca erosionada</span><b>'+fmtVol(d.B.eroded)+'</b></div>'+
+    '<div class="res">'+d.B.outcome.what+': <span style="color:#e2b13c">'+d.B.outcome.val+' '+d.B.outcome.unit+'</span></div>';
+
+  // conclusió + comprovació de la predicció
+  const winner=d.A.outcome.val>d.B.outcome.val?"A":d.B.outcome.val>d.A.outcome.val?"B":"=";
+  let predMsg="";
+  if(d.predicted!==null){
+    const ok=(d.predicted===ch.pcorrect);
+    predMsg='<div class="chr-fb '+(ok?"ok":"no")+' show">'+
+      (ok?"✓ La teva predicció era encertada!":"✗ La teva predicció no s'ha complert — fixa't en els resultats.")+'</div>';
+  }
+  document.getElementById("chrConclude").innerHTML=
+    '<span class="lead">Conclusió</span>'+ch.conclude+predMsg;
+
+  // pregunta de comprovació
+  const cc=document.getElementById("chrCheck");
+  cc.innerHTML='<div class="cq">'+ch.check+'</div><div class="copts">'+
+    ch.copts.map((o,i)=>'<button class="chk" data-ci="'+i+'"><span class="k">'+"ABC"[i]+'</span><span>'+o+'</span></button>').join("")+
+    '</div><div class="chr-fb" id="chkFb"></div>';
+  cc.querySelectorAll(".chk").forEach(b=>b.addEventListener("click",()=>{
+    if(d.answered)return;
+    const i=+b.dataset.ci, ok=(i===ch.ccorrect);
+    cc.querySelectorAll(".chk").forEach((x,xi)=>{
+      x.disabled=true;
+      if(xi===ch.ccorrect)x.classList.add("correct");
+      else if(xi===i)x.classList.add("wrong");
+    });
+    const fb=document.getElementById("chkFb");
+    fb.className="chr-fb show "+(ok?"ok":"no");
+    fb.textContent=ok?"Molt bé! Has entès com actua aquest paràmetre.":"La resposta correcta és la "+"ABC"[ch.ccorrect]+". Torna a mirar la conclusió.";
+    d.answered=true;
+    saveChallengeProgress();
+    refreshQuizGate();
+    refreshChallengeDots();
+  }));
+
+  document.getElementById("chrNext").style.display=(chIndex<CHALLENGES.length-1)?"":"none";
+  document.getElementById("chresult").classList.add("show");
+  document.getElementById("chresult").scrollIntoView({behavior:reduceMotion?"auto":"smooth",block:"start"});
+}
+function refreshChallengeDots(){
+  const host=document.getElementById("chDots");if(!host)return;
+  host.innerHTML="";
+  for(let i=0;i<CHALLENGES.length;i++){
+    const d=document.createElement("span");d.className="dot";
+    if(chData[i]&&chData[i].answered)d.classList.add("done");
+    if(i===chIndex)d.classList.add("cur");
+    host.appendChild(d);
+  }
+}
+
+/* ---- listeners de pestanyes i navegació de reptes ---- */
+document.getElementById("tab-explora").addEventListener("click",()=>switchTab("explora"));
+document.getElementById("tab-repte").addEventListener("click",()=>switchTab("repte"));
+document.getElementById("tab-quiz").addEventListener("click",()=>switchTab("quiz"));
+document.getElementById("qlGoRepte").addEventListener("click",()=>switchTab("repte"));
+document.getElementById("chPrev").addEventListener("click",()=>{ if(chIndex>0)loadChallenge(chIndex-1); });
+document.getElementById("chNext").addEventListener("click",()=>{ if(chIndex<CHALLENGES.length-1)loadChallenge(chIndex+1); });
+document.getElementById("chrNext").addEventListener("click",()=>{
+  if(chIndex<CHALLENGES.length-1)loadChallenge(chIndex+1);
+  document.getElementById("view-repte").scrollIntoView({behavior:reduceMotion?"auto":"smooth",block:"start"});
+});
+document.getElementById("chrRetry").addEventListener("click",()=>{
+  chData[chIndex]={A:null,B:null,predicted:null,answered:false};
+  saveChallengeProgress();
+  loadChallenge(chIndex);
+  refreshQuizGate();
+  document.getElementById("view-repte").scrollIntoView({behavior:reduceMotion?"auto":"smooth",block:"start"});
+});
+
+loadChallengeProgress();   // recupera el progrés dels reptes d'una sessió anterior
+refreshQuizGate();         // i actualitza el cadenat del qüestionari
+switchTab("explora");
+selectAgent("riu");
+requestAnimationFrame(frame);
+
+/* =========================================================
+   QÜESTIONARI
+   ========================================================= */
+const KEY="modelat_relleu_v3";
+const QUESTIONS=[
+  { q:"Quin és l'ordre correcte del procés geològic extern?",
+    o:["Sedimentació → transport → erosió → meteorització",
+       "Meteorització → erosió → transport → sedimentació",
+       "Erosió → meteorització → sedimentació → transport",
+       "Transport → sedimentació → meteorització → erosió"],
+    c:1, e:"Primer la roca s'altera i es trenca (meteorització), després s'arrenca i es trasllada (erosió i transport) i finalment es diposita (sedimentació)." },
+
+  { q:"Una vall ampla i de fons pla, en forma de U, és típica de l'acció de…",
+    o:["un riu","una glacera","el vent","el mar"],
+    c:1, e:"Les glaceres excaven valls amples en forma de U; els rius, en canvi, fan valls estretes en forma de V." },
+
+  { q:"Una vall estreta i profunda en forma de V es forma sobretot per l'acció de…",
+    o:["un riu al seu curs alt","una glacera","el vent","les onades del mar"],
+    c:0, e:"Al curs alt, el riu baixa amb molta força i excava verticalment la roca, obrint una vall en V." },
+
+  { q:"Quin agent geològic forma les dunes?",
+    o:["El riu","El mar","El vent","La glacera"],
+    c:2, e:"El vent transporta la sorra i la diposita formant dunes, que es desplacen en la direcció del vent." },
+
+  { q:"Els penya-segats i les plataformes d'abrasió són formes del relleu creades per…",
+    o:["el vent","el mar","les glaceres","les arrels de les plantes"],
+    c:1, e:"Les onades piquen contra la costa, retallen la roca i fan retrocedir el penya-segat, deixant una plataforma d'abrasió." },
+
+  { q:"Una morrena és un dipòsit de materials transportats per…",
+    o:["un riu","el vent","una glacera","el mar"],
+    c:2, e:"La glacera arrossega roques i, quan es fon al front, les diposita formant una morrena." },
+
+  { q:"Com s'anomena el dipòsit de sediments que es forma a la desembocadura d'un riu?",
+    o:["Un meandre","Un delta","Un congost","Una duna"],
+    c:1, e:"En arribar al mar o a un llac, el riu perd velocitat i diposita els sediments formant un delta." },
+
+  { q:"L'aigua entra a les esquerdes d'una roca, es gela i la trenca. Aquest tipus de meteorització és…",
+    o:["física (gelifracció)","química","biològica","no és meteorització"],
+    c:0, e:"L'aigua, en gelar-se, augmenta de volum i trenca la roca. És meteorització física i s'anomena gelifracció." },
+
+  { q:"Quin d'aquests és un exemple de meteorització biològica?",
+    o:["El vent que poleix la roca","Les arrels de les plantes que fracturen la roca","Les onades que piquen el penya-segat","El gel que es fon en un riu"],
+    c:1, e:"Les arrels creixen dins les esquerdes i trenquen la roca; també els líquens l'alteren. És meteorització biològica." },
+
+  { q:"Al simulador, si augmentes la cobertura vegetal, l'erosió del terreny…",
+    o:["augmenta molt","disminueix","no canvia gens","desapareix del tot"],
+    c:1, e:"Les arrels i les plantes subjecten el sòl i el protegeixen, de manera que l'erosió disminueix." },
+
+  { q:"Quin d'aquests NO és un agent geològic extern?",
+    o:["El riu","El vent","Un volcà","El mar"],
+    c:2, e:"Els volcans (i els terratrèmols) són agents interns, moguts per l'energia de l'interior de la Terra. Riu, vent, mar, glaceres i éssers vius són externs." },
+
+  // --- noves preguntes lligades als reptes del simulador ---
+  { q:"Als reptes has vist dos rius iguals sobre roques diferents. Sobre quina roca excava una vall MÉS FONDA?",
+    o:["Sobre la roca tova","Sobre la roca dura","Excava igual en totes dues","No depèn de la roca"],
+    c:0, e:"La roca tova oposa menys resistència, així que l'aigua l'excava més de pressa i la vall queda més fonda. La roca dura resisteix l'erosió." },
+
+  { q:"Si fas servir un riu amb MÉS intensitat (més cabal i pendent), l'erosió…",
+    o:["és més gran","és més petita","no canvia","s'atura"],
+    c:0, e:"Com més intens és l'agent, més energia té per arrencar i transportar roca: l'erosió augmenta. Per això un riu de muntanya erosiona més que un de plana." },
+
+  { q:"En una zona de dunes, per què es planten arbres i altres plantes?",
+    o:["Per fer més fina la sorra","Per fixar la sorra i evitar que el vent l'arrossegui","Perquè els arbres atrauen el vent","Per assecar el terreny"],
+    c:1, e:"Les arrels subjecten la sorra i la vegetació frena el vent, de manera que les dunes deixen d'avançar. És una manera de lluitar contra la desertització." },
+
+  { q:"El procés pel qual el vent arrenca i s'emporta les partícules soltes del terra s'anomena…",
+    o:["sedimentació","deflació","gelifracció","meandre"],
+    c:1, e:"La deflació és l'erosió eòlica: el vent aixeca i s'emporta les partícules soltes, sobretot allà on el terra està nu i sense vegetació." }
+];
+
+const TOTAL=QUESTIONS.length;
+let state=loadState();
+
+function loadState(){
+  const raw=store.get(KEY);
+  if(raw){try{const s=JSON.parse(raw);if(s&&s.ans&&s.ans.length===TOTAL)return s;}catch(e){}}
+  return {nom:"",grup:"",ans:QUESTIONS.map(()=>({attempts:0,done:false,pts:0,picked:[]}))};
+}
+function saveState(){
+  state.nom=document.getElementById("nom").value;
+  state.grup=document.getElementById("grup").value;
+  store.set(KEY,JSON.stringify(state));
+  flashSaved();
+}
+let savedTimer=null;
+function flashSaved(){
+  const n=document.getElementById("savedNote");
+  n.textContent="✓ Desat automàticament";
+  clearTimeout(savedTimer);savedTimer=setTimeout(()=>n.textContent="",1600);
+}
+
+const qlist=document.getElementById("qlist");
+function renderQuiz(){
+  document.getElementById("nom").value=state.nom||"";
+  document.getElementById("grup").value=state.grup||"";
+  qlist.innerHTML="";
+  QUESTIONS.forEach((q,qi)=>{
+    const st=state.ans[qi];
+    const card=document.createElement("div");card.className="q";
+    const opts=q.o.map((txt,oi)=>{
+      let cls="opt";
+      if(st.done){
+        if(oi===q.c)cls+=" correct";
+        else if(st.picked.includes(oi))cls+=" wrong";
+      }else if(st.picked.includes(oi))cls+=" wrong";
+      const dis=st.done?"disabled":"";
+      return '<button class="'+cls+'" data-q="'+qi+'" data-o="'+oi+'" '+dis+'>'+
+             '<span class="k">'+"ABCD"[oi]+'</span><span>'+txt+'</span></button>';
+    }).join("");
+    let fb="";
+    if(st.done){
+      const got=st.pts;
+      const tag=got===1?"Correcte a la primera!":got===0.5?"Correcte al segon intent.":"Resposta correcta marcada.";
+      fb='<div class="fb done show"><b>'+tag+'</b> '+q.e+'</div>';
+    }else if(st.attempts===1){
+      fb='<div class="fb try show">Quasi! Et queda <b>un intent</b>.</div>';
+    }
+    card.innerHTML='<div class="stem"><span class="qn">'+(qi+1)+'.</span><span>'+q.q+'</span></div>'+
+                   '<div class="opts">'+opts+'</div>'+fb;
+    qlist.appendChild(card);
+  });
+  qlist.querySelectorAll(".opt:not(:disabled)").forEach(btn=>{
+    btn.addEventListener("click",()=>answer(+btn.dataset.q,+btn.dataset.o));
+  });
+  updateScore();
+}
+
+function answer(qi,oi){
+  const st=state.ans[qi],q=QUESTIONS[qi];
+  if(st.done)return;
+  if(st.picked.includes(oi))return;
+  if(oi===q.c){
+    st.done=true;
+    st.pts=st.attempts===0?1:0.5;
+    st.picked.push(oi);
+  }else{
+    st.attempts++;
+    st.picked.push(oi);
+    if(st.attempts>=2){st.done=true;st.pts=0;}
+  }
+  saveState();renderQuiz();
+}
+
+function updateScore(){
+  const got=state.ans.reduce((s,a)=>s+a.pts,0);
+  const answered=state.ans.filter(a=>a.done).length;
+  const pct=TOTAL?Math.round(got/TOTAL*100):0;
+  document.getElementById("scorePill").textContent=got+" / "+TOTAL+" punts";
+  document.getElementById("trackFill").style.width=pct+"%";
+  const msg=document.getElementById("scoreMsg");
+  if(answered<TOTAL){msg.textContent="Has respost "+answered+" de "+TOTAL+" preguntes. Tens dos intents per pregunta.";}
+  else if(pct>=90)msg.textContent="Excel·lent! Domines el modelat del relleu ("+pct+"%).";
+  else if(pct>=70)msg.textContent="Molt bé! ("+pct+"%) Repassa els punts que t'han fallat.";
+  else if(pct>=50)msg.textContent="Bé, però pots millorar ("+pct+"%). Torna al simulador i revisa el tema.";
+  else msg.textContent="Cal repassar el tema ("+pct+"%). Prova els agents al simulador i torna-ho a intentar.";
+}
+
+document.getElementById("nom").addEventListener("input",saveState);
+document.getElementById("grup").addEventListener("input",saveState);
+document.getElementById("resetQuiz").addEventListener("click",()=>{
+  if(confirm("Segur que vols reiniciar el qüestionari? Es perdran les respostes desades.")){
+    store.del(KEY);
+    state={nom:document.getElementById("nom").value,grup:document.getElementById("grup").value,
+           ans:QUESTIONS.map(()=>({attempts:0,done:false,pts:0,picked:[]}))};
+    saveState();renderQuiz();
+  }
+});
+
+renderQuiz();
+</script>
+</body>
+</html>
