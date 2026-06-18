@@ -131,7 +131,7 @@
   .cmp-shell{position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--line);touch-action:none;cursor:ew-resize;user-select:none}
   .cmp-shell canvas{display:block;width:100%;height:auto;aspect-ratio:900/460}
   .cmp-after{position:absolute;inset:0;overflow:hidden}
-  .cmp-tag{position:absolute;top:10px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:#fff;background:rgba(20,30,42,.78);padding:3px 9px;border-radius:6px;pointer-events:none}
+  .cmp-tag{position:absolute;top:10px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:#fff;background:rgba(20,30,42,.78);padding:3px 9px;border-radius:6px;pointer-events:none;transition:opacity .15s ease}
   .cmp-tag.l{left:10px}
   .cmp-tag.r{right:10px}
   .cmp-divider{position:absolute;top:0;bottom:0;width:2px;background:var(--gold);box-shadow:0 0 0 1px rgba(0,0,0,.25);pointer-events:none}
@@ -415,8 +415,8 @@
       <div class="cmp-shell" id="cmpShell">
         <canvas id="cvBefore" width="900" height="460"></canvas>
         <div class="cmp-after" id="cmpAfter"><canvas id="cvAfter" width="900" height="460"></canvas></div>
-        <span class="cmp-tag l">ABANS</span>
-        <span class="cmp-tag r">DESPRÉS</span>
+        <span class="cmp-tag l" id="cmpTagBefore">ABANS</span>
+        <span class="cmp-tag r" id="cmpTagAfter">DESPRÉS</span>
         <div class="cmp-divider" id="cmpDiv"></div>
         <div class="cmp-knob" id="cmpKnob">⇆</div>
       </div>
@@ -1702,6 +1702,13 @@ function setDivider(t){
   document.getElementById("cmpAfter").style.width=(t*100)+"%";
   document.getElementById("cmpDiv").style.left=(t*100)+"%";
   document.getElementById("cmpKnob").style.left=(t*100)+"%";
+  // mostra cada etiqueta només quan el seu costat és prou visible:
+  // l'etiqueta "DESPRÉS" (dreta) apareix a mesura que es revela el després,
+  // i "ABANS" (esquerra) s'amaga quan el després ja cobreix gairebé tot.
+  const before=document.getElementById("cmpTagBefore");
+  const after=document.getElementById("cmpTagAfter");
+  if(before)before.style.opacity=(t<0.82)?"1":"0";   // s'amaga quan queda poc "abans"
+  if(after)after.style.opacity=(t>0.18)?"1":"0";      // apareix quan ja es veu prou "després"
 }
 (function initSlider(){
   const shell=document.getElementById("cmpShell");let drag=false;
